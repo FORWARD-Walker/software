@@ -17,14 +17,17 @@
 #define ECHO2 23 // Echo pin for sensor 2
 
 // Boolean flags
-bool useWiFi = false; // Set to use WiFi
-bool webSerial = false; // Set to use web serial at IP
+bool useWiFi = true; // Set to use WiFi
+bool webSerial = true; // Set to use web serial at IP
 bool hostNetwork = false; // Set to host network
-bool sonar = true; // Set to use sonar functions
+bool sonar = false; // Set to use sonar functions
 
 // WiFi global variables
 const char* ssid = ""; // Wifi network name
 const char* password = ""; // Wifi network password
+
+// WebSerial global variables
+WiFiServer server(PORT);
 
 // Network hosting global variables
 const char nom[10] = ""; // Device name
@@ -72,7 +75,6 @@ void setup()
   // Setup wireless data transmission
   if(webSerial)
   {
-    WiFiServer server(PORT);
     WiFi.softAP(ssid, password); // Connect to soft access point
     server.begin(); // Start server
     Serial.print("Access Point IP address: "); // Print out access point
@@ -106,6 +108,26 @@ void setup()
 // Main loop
 void loop()
 {
+
+  // Data transmit reading
+  if(webSerial)
+  {
+    WiFiClient client = server.available();
+
+    if (client) 
+    {
+      while (client.connected())
+      {
+        if (client.available())
+        {
+          String request = client.readStringUntil('\r');
+          Serial.println("Data: " + request);
+        }
+      }
+      client.stop();
+    }
+  }
+
   // Sensor data readings
   if(sonar)
   {
