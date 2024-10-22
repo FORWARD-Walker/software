@@ -47,17 +47,7 @@ void setup()
 {
   // Set up serial
   Serial.begin(9600); // Init Serial
-  while (!Serial) delay(10); // wait for serial port to open
   Serial.println("\nSerial Initialized");  // Print confirmation
-
-  // Try to connect to IMU
-  if(!BNO.begin())
-  {
-    /* There was a problem detecting the BNO055 ... check your connections */
-    Serial.print("Ooops, no BNO055 detected ... Check your wiring or I2C ADDR!");
-    while(1);
-  }
-  Serial.println("IMU Connected"); Serial.println(""); // IMU connected confirmation
 
   // Setup heartbeat
   pinMode(LED, OUTPUT); // Set up LED as output
@@ -67,6 +57,15 @@ void setup()
   // Setup IMU if connected
   if(imu)
   {
+    // Try to connect to IMU
+    Serial.print("Connecting to BNO055... ");
+    while(!BNO.begin())
+    {
+      /* There was a problem detecting the BNO055 ... check your connections */
+      Serial.print(".");
+      delay(500); // 1/2 second delay
+    }
+    Serial.println("IMU Connected"); Serial.println(""); // IMU connected confirmation
     BNO.setExtCrystalUse(true); // related to IMU calibration?
   }
 
