@@ -14,10 +14,10 @@
 // # Defines
 #define LED 2 // For LED Heartbeat
 #define PORT 80 // server port 
-#define TRIG1 19 // Trigger pin for sensor 1
-#define ECHO1 18 // Echo pin for sensor 1
-#define TRIG2 22 // Trigger pin for sensor 2
-#define ECHO2 23 // Echo pin for sensor 2
+#define TRIG1 32 // Trigger pin for sensor 1
+#define ECHO1 34 // Echo pin for sensor 1
+#define TRIG2 33 // Trigger pin for sensor 2
+#define ECHO2 35 // Echo pin for sensor 2
 
 // Boolean flags
 bool useWiFi = false; // Set to use WiFi
@@ -34,17 +34,21 @@ AsyncWebSocket ws("/ws");
 const char nom[10] = ""; // Device name
 uint8_t broadcastAddress[2][6] = {-1}; // AMB82 MAC
 
+// Global Variables for Sensor
+long duration1, distance1 = -1; // Store duration and distance for sensor 1
+long duration2, distance2 = -1; // Store duration and distance for sensor 2
+
 // Setup Code
 void setup()
 {
   // Set up serial
   Serial.begin(9600); // Init Serial
-  Serial.println("\nSerial Initialized");  // Print confirmation
+  Serial.println("\nSerial Initialized\n");  // Print confirmation
   
   // Setup heartbeat
   pinMode(LED, OUTPUT); // Set up LED as output
   digitalWrite(LED, HIGH); // Init to high
-  Serial.println("\nHeartbeat Initialized"); // Print confirmation
+  Serial.println("Heartbeat Initialized\n"); // Print confirmation
 
   // Setup WiFi if enabled
   if(useWiFi)
@@ -61,12 +65,13 @@ void setup()
       delay(500); // 500 ms delay
     }
 
-    Serial.println("\nConnected to the WiFi network");
+    Serial.println("\nConnected to the WiFi network\n");
     Serial.print("Local ESP32 IP: ");
     Serial.println(WiFi.localIP()); // Print out IP
 
     Serial.print("Local ESP32 MAC: ");
     Serial.println(WiFi.macAddress()); // Print out MAC
+    Serial.println();
   }
 
   // Setup if ESP32 is hosting a network
@@ -77,8 +82,10 @@ void setup()
 
     // Initialize the access point
     WiFi.softAP(ssid, password);
-    Serial.print("AP IP address: ");
+    Serial.print("\nAP IP address: ");
     Serial.println(WiFi.softAPIP());
+    Serial.println();
+
 
     // Handle WebSocket connections
     ws.onEvent(onWebSocketEvent);
@@ -117,11 +124,7 @@ void loop()
 
   // Sensor data readings
   if(sonar)
-  {
-    
-    long duration1, distance1 = -1; // Store duration and distance for sensor 1
-    long duration2, distance2 = -1; // Store duration and distance for sensor 2
-    
+  {    
     // Measure distance from Sensor 1
     digitalWrite(TRIG1, LOW);
     delayMicroseconds(2);
@@ -145,11 +148,11 @@ void loop()
     // Print results to the serial monitor
     Serial.print("S1: ");
     Serial.print(distance1);
-    Serial.print(" cm");
+    Serial.print(" cm ");
 
     Serial.print("S2: ");
     Serial.print(distance2);
-    Serial.print(" cm");
+    Serial.print(" cm ");
 
     Serial.println();
   }
