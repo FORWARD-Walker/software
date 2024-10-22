@@ -52,8 +52,8 @@ void setup()
   // Setup WiFi if enabled
   if(useWiFi)
   {
-    const char* ssid = "SpectrumSetup-FE65"; // Wifi network name
-    const char* password = "tannerboys05"; // Wifi network password
+    const char* ssid = "UCF_Guest"; //"SpectrumSetup-FE65"; // Wifi network name
+    const char* password = ""; //"tannerboys05"; // Wifi network password
 
     WiFi.mode(WIFI_STA); // WiFi mode
     WiFi.begin(ssid, password); // Connect to the network
@@ -138,7 +138,7 @@ void loop()
     delayMicroseconds(10);
     digitalWrite(TRIG1, LOW);
 
-    duration1 = pulseIn(ECHO1, HIGH);
+    duration1 = pulseIn(ECHO1, HIGH); 
     distance1 = duration1 * 0.034 / 2;  // Speed of sound = 343 m/s -> 0.034 cm/us
 
     // Measure distance from Sensor 2
