@@ -5,10 +5,14 @@
 // hosted network, sensor data processing, motor controls, basic coding functionality
 // Located remotely in https://github.com/FORWARD-Walker/software
 
-// # Include
+// # Include libraries
 #include "WiFi.h"
+#include <Wire.h>
+#include <Adafruit_Sensor.h>
+#include <Adafruit_BNO055.h>
+#include <utility/imumaths.h>
 
-// # Defines
+// # Defines (needed for GPIO pins)
 #define LED 2 // For LED Heartbeat
 #define PORT 80 // server port    // Define sensor pins
 #define TRIG1 19 // Trigger pin for sensor 1
@@ -16,11 +20,15 @@
 #define TRIG2 22 // Trigger pin for sensor 2
 #define ECHO2 23 // Echo pin for sensor 2
 
+// Peripherals
+Adafruit_BNO055 BNO = Adafruit_BNO055(-1, 0x29, &Wire);
+
 // Boolean flags
 bool useWiFi = false; // Set to use WiFi
 bool webSerial = false; // Set to use web serial at IP
 bool hostNetwork = false; // Set to host network
 bool sonar = true; // Set to use sonar functions
+bool imu = true; // set to use IMU
 
 // WiFi global variables
 const char* ssid = ""; // Wifi network name
@@ -39,12 +47,28 @@ void setup()
 {
   // Set up serial
   Serial.begin(9600); // Init Serial
+  while (!Serial) delay(10); // wait for serial port to open
   Serial.println("\nSerial Initialized");  // Print confirmation
-  
+
+  // Try to connect to IMU
+  if(!BNO.begin())
+  {
+    /* There was a problem detecting the BNO055 ... check your connections */
+    Serial.print("Ooops, no BNO055 detected ... Check your wiring or I2C ADDR!");
+    while(1);
+  }
+  Serial.println("IMU Connected"); Serial.println(""); // IMU connected confirmation
+
   // Setup heartbeat
   pinMode(LED, OUTPUT); // Set up LED as output
   digitalWrite(LED, HIGH); // Init to high
   Serial.println("\nHeartbeat Initialized"); // Print confirmation
+
+  // Setup IMU if connected
+  if(imu)
+  {
+    BNO.setExtCrystalUse(true); // related to IMU calibration?
+  }
 
   // Setup WiFi if enabled
   if(useWiFi)
@@ -139,6 +163,16 @@ void loop()
     Serial.print(" cm");
 
     Serial.println();
+  }
+
+  if(imu)
+  {
+    // get Euler Angles
+    imu::Vector<3> euler = BNO.getVector(Adafruit_BNO055::VECTOR_EULER);
+    
+    // calibration status: 0=uncalibrated, 3=fully calibrated
+    uint8_t system, gyro, accel, mag = 0;
+    BNO.getCalibration(&system, &gyro, &accel, &mag);
   }
 
   digitalWrite(LED, digitalRead(LED) ^ 1);  // Heartbeat
