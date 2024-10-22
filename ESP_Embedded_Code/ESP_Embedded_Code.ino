@@ -7,6 +7,9 @@
 
 // # Include
 #include "WiFi.h"
+#include <AsyncTCP.h>
+#include <ESPAsyncWebServer.h>
+#include <AsyncWebSocket.h>
 
 // # Defines
 #define LED 2 // For LED Heartbeat
@@ -17,19 +20,17 @@
 #define ECHO2 23 // Echo pin for sensor 2
 
 // Boolean flags
-bool useWiFi = true; // Set to use WiFi
-bool webSerial = true; // Set to use web serial at IP
-bool hostNetwork = false; // Set to host network
+bool useWiFi = false; // Set to use WiFi
+bool hostNetwork = true; // Set to host network
 bool sonar = false; // Set to use sonar functions
 
 // WiFi global variables
 const char* ssid = ""; // Wifi network name
 const char* password = ""; // Wifi network password
 
-// WebSerial global variables
-WiFiServer server(PORT);
-
 // Network hosting global variables
+AsyncWebServer server(80);
+AsyncWebSocket ws("/ws");
 const char nom[10] = ""; // Device name
 uint8_t broadcastAddress[2][6] = {-1}; // AMB82 MAC
 
@@ -48,8 +49,8 @@ void setup()
   // Setup WiFi if enabled
   if(useWiFi)
   {
-    const char* ssid = "UCF_Guest"; //"SpectrumSetup-FE65"; // Wifi network name
-    const char* password = ""; //"tannerboys05"; // Wifi network password
+    const char* ssid = "SpectrumSetup-FE65"; // Wifi network name
+    const char* password = "tannerboys05"; // Wifi network password
 
     WiFi.mode(WIFI_STA); // WiFi mode
     WiFi.begin(ssid, password); // Connect to the network
@@ -68,26 +69,30 @@ void setup()
     Serial.println(WiFi.macAddress()); // Print out MAC
   }
 
-  // Setup wireless data transmission
-  if(webSerial)
-  {
-    WiFi.softAP(ssid, password); // Connect to soft access point
-    server.begin(); // Start server
-    Serial.print("Access Point IP address: "); // Print out access point
-    Serial.println(WiFi.softAPIP());
-
-    // For use: https://forum.arduino.cc/t/data-transfer-between-esp32-devices-via-wifi/1240769/9
-  }
-
   // Setup if ESP32 is hosting a network
   if(hostNetwork)
   {
-    const char nom[10] = "ESP32"; // Device name
+    const char* ssid = "ESP_Acess_Point_Network"; // Network name
+    const char* password = "ESP32?AP"; // Network pass
+
+    // Initialize the access point
+    WiFi.softAP(ssid, password);
+    Serial.print("AP IP address: ");
+    Serial.println(WiFi.softAPIP());
+
+    // Handle WebSocket connections
+    ws.onEvent(onWebSocketEvent);
+    server.addHandler(&ws);
+
+    // Start the server
+    server.begin();
+
+    /*const char nom[10] = "ESP32"; // Device name
     uint8_t broadcastAddress[2][6] = {0x40, 0xf4, 0xc9, 0x12, 0xc7, 0xc7}; // AMB82 MAC
 
     // TODO: setup host network code
     // https://learn.sparkfun.com/tutorials/sending-sensor-data-over-wifi/all
-    // https://www.aranacorp.com/en/creating-an-esp32-network-with-esp-now/
+    // https://www.aranacorp.com/en/creating-an-esp32-network-with-esp-now/*/
   }
 
   // Setup Sonar sensors if connected
@@ -105,22 +110,9 @@ void setup()
 void loop()
 {
   // Data transmit reading
-  if(webSerial)
+  if(hostNetwork)
   {
-    WiFiClient client = server.available();
-
-    if (client) 
-    {
-      while (client.connected())
-      {
-        if (client.available())
-        {
-          String request = client.readStringUntil('\r');
-          Serial.println("Data: " + request);
-        }
-      }
-      client.stop();
-    }
+    ws.cleanupClients();
   }
 
   // Sensor data readings
@@ -167,7 +159,17 @@ void loop()
 }
 
 /////////////// Functions ///////////////
-
+void onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, 
+                      AwsEventType type, void *arg, uint8_t *data, size_t len) {
+  if (type == WS_EVT_CONNECT) {
+    Serial.println("Client connected");
+    client->text("Hello from ESP32!");
+  } else if (type == WS_EVT_DATA) {
+    // Handle incoming data from clients
+    Serial.println("Data received");
+    client->text("Data received");
+  }
+}
 
 
 
