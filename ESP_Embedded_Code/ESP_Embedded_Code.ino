@@ -7,30 +7,34 @@
 
 // # Include
 #include "WiFi.h"
+#include <AsyncTCP.h>
+#include <ESPAsyncWebServer.h>
+#include <AsyncWebSocket.h>
 
 // # Defines
 #define LED 2 // For LED Heartbeat
-#define PORT 80 // server port    // Define sensor pins
-#define TRIG1 19 // Trigger pin for sensor 1
-#define ECHO1 18 // Echo pin for sensor 1
-#define TRIG2 22 // Trigger pin for sensor 2
-#define ECHO2 23 // Echo pin for sensor 2
+#define PORT 80 // server port 
+#define TRIG1 32 // Trigger pin for sensor 1
+#define ECHO1 34 // Echo pin for sensor 1
+#define TRIG2 33 // Trigger pin for sensor 2
+#define ECHO2 35 // Echo pin for sensor 2
 
 // Boolean flags
 bool useWiFi = false; // Set to use WiFi
-bool webSerial = false; // Set to use web serial at IP
-bool hostNetwork = false; // Set to host network
-bool sonar = true; // Set to use sonar functions
+bool hostNetwork = true; // Set to host network
+bool sonar = false; // Set to use sonar functions
 
 // WiFi global variables
 const char* ssid = ""; // Wifi network name
 const char* password = ""; // Wifi network password
 
 // Network hosting global variables
+AsyncWebServer server(80);
+AsyncWebSocket ws("/ws");
 const char nom[10] = ""; // Device name
 uint8_t broadcastAddress[2][6] = {-1}; // AMB82 MAC
 
-// Sensor global variables
+// Global Variables for Sensor
 long duration1, distance1 = -1; // Store duration and distance for sensor 1
 long duration2, distance2 = -1; // Store duration and distance for sensor 2
 
@@ -39,12 +43,12 @@ void setup()
 {
   // Set up serial
   Serial.begin(9600); // Init Serial
-  Serial.println("\nSerial Initialized");  // Print confirmation
+  Serial.println("\nSerial Initialized\n");  // Print confirmation
   
   // Setup heartbeat
   pinMode(LED, OUTPUT); // Set up LED as output
   digitalWrite(LED, HIGH); // Init to high
-  Serial.println("\nHeartbeat Initialized"); // Print confirmation
+  Serial.println("Heartbeat Initialized\n"); // Print confirmation
 
   // Setup WiFi if enabled
   if(useWiFi)
@@ -61,35 +65,41 @@ void setup()
       delay(500); // 500 ms delay
     }
 
-    Serial.println("\nConnected to the WiFi network");
+    Serial.println("\nConnected to the WiFi network\n");
     Serial.print("Local ESP32 IP: ");
     Serial.println(WiFi.localIP()); // Print out IP
 
     Serial.print("Local ESP32 MAC: ");
     Serial.println(WiFi.macAddress()); // Print out MAC
-  }
-
-  // Setup wireless data transmission
-  if(webSerial)
-  {
-    WiFiServer server(PORT);
-    WiFi.softAP(ssid, password); // Connect to soft access point
-    server.begin(); // Start server
-    Serial.print("Access Point IP address: "); // Print out access point
-    Serial.println(WiFi.softAPIP());
-
-    // For use: https://forum.arduino.cc/t/data-transfer-between-esp32-devices-via-wifi/1240769/9
+    Serial.println();
   }
 
   // Setup if ESP32 is hosting a network
   if(hostNetwork)
   {
-    const char nom[10] = "ESP32"; // Device name
+    const char* ssid = "ESP_Acess_Point_Network"; // Network name
+    const char* password = "ESP32?AP"; // Network pass
+
+    // Initialize the access point
+    WiFi.softAP(ssid, password);
+    Serial.print("\nAP IP address: ");
+    Serial.println(WiFi.softAPIP());
+    Serial.println();
+
+
+    // Handle WebSocket connections
+    ws.onEvent(onWebSocketEvent);
+    server.addHandler(&ws);
+
+    // Start the server
+    server.begin();
+  
+    /*const char nom[10] = "ESP32"; // Device name
     uint8_t broadcastAddress[2][6] = {0x40, 0xf4, 0xc9, 0x12, 0xc7, 0xc7}; // AMB82 MAC
 
     // TODO: setup host network code
     // https://learn.sparkfun.com/tutorials/sending-sensor-data-over-wifi/all
-    // https://www.aranacorp.com/en/creating-an-esp32-network-with-esp-now/
+    // https://www.aranacorp.com/en/creating-an-esp32-network-with-esp-now/*/
   }
 
   // Setup Sonar sensors if connected
@@ -106,9 +116,15 @@ void setup()
 // Main loop
 void loop()
 {
+  // Data transmit reading
+  if(hostNetwork)
+  {
+    ws.cleanupClients();
+  }
+
   // Sensor data readings
   if(sonar)
-  {
+  {    
     // Measure distance from Sensor 1
     digitalWrite(TRIG1, LOW);
     delayMicroseconds(2);
@@ -116,7 +132,7 @@ void loop()
     delayMicroseconds(10);
     digitalWrite(TRIG1, LOW);
 
-    duration1 = pulseIn(ECHO1, HIGH);
+    duration1 = pulseIn(ECHO1, HIGH); 
     distance1 = duration1 * 0.034 / 2;  // Speed of sound = 343 m/s -> 0.034 cm/us
 
     // Measure distance from Sensor 2
@@ -132,11 +148,11 @@ void loop()
     // Print results to the serial monitor
     Serial.print("S1: ");
     Serial.print(distance1);
-    Serial.print(" cm");
+    Serial.print(" cm ");
 
     Serial.print("S2: ");
     Serial.print(distance2);
-    Serial.print(" cm");
+    Serial.print(" cm ");
 
     Serial.println();
   }
@@ -146,3 +162,19 @@ void loop()
 }
 
 /////////////// Functions ///////////////
+void onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, 
+                      AwsEventType type, void *arg, uint8_t *data, size_t len) {
+  if (type == WS_EVT_CONNECT) {
+    Serial.println("Client connected");
+    client->text("Hello from ESP32!");
+  } else if (type == WS_EVT_DATA) {
+    // Handle incoming data from clients
+    Serial.println("Data received");
+    client->text("Data received");
+  }
+}
+
+
+
+
+
