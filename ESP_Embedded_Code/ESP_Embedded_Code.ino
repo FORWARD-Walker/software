@@ -51,8 +51,8 @@ void setup()
   // Setup WiFi if enabled
   if(useWiFi)
   {
-    const char* ssid = "FORWARD_Network"; // Wifi network name
-    const char* password = "Forward?0525"; // Wifi network password
+    const char* ssid = "SpectrumSetup-FE65"; // Wifi network name
+    const char* password = "tannerboys05"; // Wifi network password
 
     WiFi.mode(WIFI_STA); // WiFi mode
     WiFi.begin(ssid, password); // Connect to the network
