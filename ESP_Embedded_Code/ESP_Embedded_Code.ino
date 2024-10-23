@@ -7,13 +7,13 @@
 
 // # Include
 #include "WiFi.h"
-#include <AsyncTCP.h>
-#include <ESPAsyncWebServer.h>
-#include <AsyncWebSocket.h>
+#include <WiFiUdp.h>
+#include <WebServer.h>
+
 
 // # Defines
 #define LED 2 // For LED Heartbeat
-#define PORT 80 // server port 
+#define PORT 12345 // server port 
 #define TRIG1 32 // Trigger pin for sensor 1
 #define ECHO1 34 // Echo pin for sensor 1
 #define TRIG2 33 // Trigger pin for sensor 2
@@ -29,10 +29,8 @@ const char* ssid = ""; // Wifi network name
 const char* password = ""; // Wifi network password
 
 // Network hosting global variables
-AsyncWebServer server(80);
-AsyncWebSocket ws("/ws");
-const char nom[10] = ""; // Device name
-uint8_t broadcastAddress[2][6] = {-1}; // AMB82 MAC
+WiFiUDP udp; // UDP object
+WebServer server(80);
 
 // Global Variables for Sensor
 long duration1, distance1 = -1; // Store duration and distance for sensor 1
@@ -42,13 +40,13 @@ long duration2, distance2 = -1; // Store duration and distance for sensor 2
 void setup()
 {
   // Set up serial
-  Serial.begin(9600); // Init Serial
-  Serial.println("\nSerial Initialized\n");  // Print confirmation
+  Serial.begin(115200); // Init Serial
+  Serial.println("\nSerial Initialized!\n");  // Print confirmation
   
   // Setup heartbeat
   pinMode(LED, OUTPUT); // Set up LED as output
   digitalWrite(LED, HIGH); // Init to high
-  Serial.println("Heartbeat Initialized\n"); // Print confirmation
+  Serial.println("Heartbeat Initialized!\n"); // Print confirmation
 
   // Setup WiFi if enabled
   if(useWiFi)
@@ -77,22 +75,26 @@ void setup()
   // Setup if ESP32 is hosting a network
   if(hostNetwork)
   {
-    const char* ssid = "ESP_Acess_Point_Network"; // Network name
-    const char* password = "ESP32?AP"; // Network pass
+    const char* ssid = "FORWARD_Network"; // Network name
+    const char* password = "Forward?0525"; // Network pass
 
     // Initialize the access point
     WiFi.softAP(ssid, password);
-    Serial.print("\nAP IP address: ");
+
+    // Serial out server init
+    Serial.println("Server Initialized!");
+    Serial.print("AP IP address: ");
     Serial.println(WiFi.softAPIP());
     Serial.println();
 
-
-    // Handle WebSocket connections
-    ws.onEvent(onWebSocketEvent);
-    server.addHandler(&ws);
-
     // Start the server
     server.begin();
+
+    // UDP server setup
+    udp.begin(PORT);
+    Serial.print("UDP Initialized!\n");
+    Serial.printf("UDP server started at port %d\n", PORT);
+
   
     /*const char nom[10] = "ESP32"; // Device name
     uint8_t broadcastAddress[2][6] = {0x40, 0xf4, 0xc9, 0x12, 0xc7, 0xc7}; // AMB82 MAC
@@ -119,7 +121,19 @@ void loop()
   // Data transmit reading
   if(hostNetwork)
   {
-    ws.cleanupClients();
+    char incomingPacket[255];  // Buffer for incoming packets
+    int packetSize = udp.parsePacket();  // Check for incoming packet
+    
+    if (packetSize) {
+        // Read the packet into the buffer
+        int len = udp.read(incomingPacket, 255);
+        if (len > 0) {
+            incomingPacket[len] = '\0';  // Null-terminate the string
+        }
+        
+        // Print the incoming packet
+        Serial.printf("%s\n", incomingPacket);
+    }
   }
 
   // Sensor data readings
@@ -158,23 +172,8 @@ void loop()
   }
 
   digitalWrite(LED, digitalRead(LED) ^ 1);  // Heartbeat
-  delay(500);
 }
 
 /////////////// Functions ///////////////
-void onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, 
-                      AwsEventType type, void *arg, uint8_t *data, size_t len) {
-  if (type == WS_EVT_CONNECT) {
-    Serial.println("Client connected");
-    client->text("Hello from ESP32!");
-  } else if (type == WS_EVT_DATA) {
-    // Handle incoming data from clients
-    Serial.println("Data received");
-    client->text("Data received");
-  }
-}
-
-
-
 
 
