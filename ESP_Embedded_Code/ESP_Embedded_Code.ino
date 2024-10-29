@@ -121,16 +121,16 @@ void loop()
   // Data transmit reading
   if(hostNetwork)
   {
-    char incomingPacket[255];  // Buffer for incoming packets
-    int packetSize = udp.parsePacket();  // Check for incoming packet
-    
-    if (packetSize) {
+    char incomingPacket[512];  // Buffer for incoming packets
+
+    int packetSize = udp.parsePacket();
+    if (packetSize > 0) {
         // Read the packet into the buffer
-        int len = udp.read(incomingPacket, 255);
+        int len = udp.read(incomingPacket, sizeof(incomingPacket) - 1);  // Leave space for null-terminator
         if (len > 0) {
             incomingPacket[len] = '\0';  // Null-terminate the string
         }
-        
+
         // Print the incoming packet
         Serial.printf("%s\n", incomingPacket);
     }
@@ -138,26 +138,10 @@ void loop()
 
   // Sensor data readings
   if(sonar)
-  {    
-    // Measure distance from Sensor 1
-    digitalWrite(TRIG1, LOW);
-    delayMicroseconds(2);
-    digitalWrite(TRIG1, HIGH);
-    delayMicroseconds(10);
-    digitalWrite(TRIG1, LOW);
-
-    duration1 = pulseIn(ECHO1, HIGH); 
-    distance1 = duration1 * 0.034 / 2;  // Speed of sound = 343 m/s -> 0.034 cm/us
-
-    // Measure distance from Sensor 2
-    digitalWrite(TRIG2, LOW);
-    delayMicroseconds(2);
-    digitalWrite(TRIG2, HIGH);
-    delayMicroseconds(10);
-    digitalWrite(TRIG2, LOW);
-
-    duration2 = pulseIn(ECHO2, HIGH);
-    distance2 = duration2 * 0.034 / 2;
+  {   
+    // Obtain distance 
+    distance1 = readDistance(TRIG1, ECHO1);
+    distance2 = readDistance(TRIG2, ECHO2);
 
     // Print results to the serial monitor
     Serial.print("S1: ");
@@ -171,9 +155,19 @@ void loop()
     Serial.println();
   }
 
+  delay(100);
   digitalWrite(LED, digitalRead(LED) ^ 1);  // Heartbeat
 }
 
 /////////////// Functions ///////////////
+long readDistance(int trigPin, int echoPin) {
+    digitalWrite(trigPin, LOW);
+    delayMicroseconds(2);
+    digitalWrite(trigPin, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(trigPin, LOW);
 
+    long duration = pulseIn(echoPin, HIGH);
+    return duration * 0.034 / 2;
+}
 
