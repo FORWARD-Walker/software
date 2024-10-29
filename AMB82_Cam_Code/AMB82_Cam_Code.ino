@@ -109,9 +109,8 @@ void loop() {
     uint16_t im_w = config.width();
 
     // Convert the result count to string and send it
-    char resultCountStr[20];
-    sprintf(resultCountStr, "# of Objects: %d", ObjDet.getResultCount());
-    writeMsg(resultCountStr); // Send number of results
+    char resultStr[512];
+    sprintf(resultStr, "# of Objects: %d\n", ObjDet.getResultCount());
 
     if (ObjDet.getResultCount() > 0) {
         for (uint32_t i = 0; i < ObjDet.getResultCount(); i++) {
@@ -127,12 +126,16 @@ void loop() {
                 int ymax = (int)(item.yMax() * im_h);
 
                 // Prepare the message string
-                char msg[100]; // Adjust size as needed
-                sprintf(msg, "Object: %s, %d, %d, %d, %d", item.name(), xmin, xmax, ymin, ymax);
-                writeMsg(msg); // Send the formatted results
+                char msg[64]; // Adjust size as needed
+                sprintf(msg, "Object: %s, %d, %d, %d, %d\n", item.name(), xmin, xmax, ymin, ymax);
+                strcat(resultStr, msg); // Send the formatted results
             }
         }
     }
+
+    // Send results packet
+    strcat(resultStr, "\n");
+    writeMsg(resultStr);
 
     // delay to wait for new results
     delay(100);
