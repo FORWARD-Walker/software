@@ -1,6 +1,6 @@
 // EEL 4914 Senior Design MCU Code
 // Developers: Tobiah Bower, Morgan Snyder, Matthew Morello
-// The Code servers to drive all process on the ESP32 MCU for our project
+// The Code serves to drive all process on the ESP32 MCU for our project
 // Features include: WiFi connectivity, data transmission over wifi, Locally 
 // hosted network, sensor data processing, motor controls, basic coding functionality
 // Located remotely in https://github.com/FORWARD-Walker/software
@@ -14,12 +14,12 @@
 #include <Adafruit_BNO055.h>
 #include <utility/imumaths.h>
 
-
 // # Defines
 #define LED 2 // For LED Heartbeat
 #define PORT 12345 // server port 
-#define IMU_I2C_ADDR 0x28 // IMU I2C addr
-#define IMU_DEV_ID -1
+#define IMU_I2C_ADDR 0x29 // IMU I2C addr
+#define IMU_DEV_ID 55
+#define TFLUNA_I2C_ADDR 0x10
 
 // Sonar Pins
 #define TRIG1 32 // Trigger pin for sensor 1
@@ -33,10 +33,11 @@
 
 // Boolean flags
 bool useWiFi = false; // Set to use WiFi
-bool hostNetwork = false; // Set to host network
-bool useSonar = true; // Set to use sonar functions
+bool hostNetwork = true; // Set to host network
+bool useCV = true; // Set to use computer vision
+bool useSonar = false; // Set to use sonar functions
 bool useLiDAR = false; // Set to use LiDAR functions
-bool useImu = true; // Set to use IMU
+bool useImu = false; // Set to use IMU
 
 // WiFi global variables
 const char* ssid = ""; // Wifi network name
@@ -54,7 +55,13 @@ long sonarDistance_4 = -1; // Store duration and distance for sensor 2
 
 // IMU Global Var
 Adafruit_BNO055 bno = Adafruit_BNO055(IMU_DEV_ID, IMU_I2C_ADDR, &Wire);
+sensors_event_t event; // Event object
+float yaw = -1;
+float pitch = -1;
+float roll = -1;
 
+// LiDAR Global Var
+uint16_t lidarDistance = -1;
 
 // Setup Code
 void setup()
@@ -62,7 +69,11 @@ void setup()
   // Set up serial
   Serial.begin(115200); // Init Serial
   Serial.println("\nSerial Initialized!\n");  // Print confirmation
-  
+
+  // Set up I2C
+  Wire.begin();
+  Serial.println("I2C Initialized!\n"); // Print confirmation
+
   // Setup heartbeat
   pinMode(LED, OUTPUT); // Set up LED as output
   digitalWrite(LED, HIGH); // Init to high
@@ -114,14 +125,6 @@ void setup()
     udp.begin(PORT);
     Serial.print("UDP Initialized!\n");
     Serial.printf("UDP server started at port %d\n", PORT);
-
-  
-    /*const char nom[10] = "ESP32"; // Device name
-    uint8_t broadcastAddress[2][6] = {0x40, 0xf4, 0xc9, 0x12, 0xc7, 0xc7}; // AMB82 MAC
-
-    // TODO: setup host network code
-    // https://learn.sparkfun.com/tutorials/sending-sensor-data-over-wifi/all
-    // https://www.aranacorp.com/en/creating-an-esp32-network-with-esp-now/*/
   }
 
   // Setup Sonar sensors if connected
@@ -136,18 +139,22 @@ void setup()
     pinMode(ECHO3, INPUT);
     pinMode(TRIG4, OUTPUT);
     pinMode(ECHO4, INPUT);
+
+    Serial.println("Sonar Initialized!\n"); // Print confirmation
   }
 
   // Intialize IMU object
   if(useImu)
   {
-    while(!bno.begin())
-    {
-      Serial.println("Could not find a valid BNO sensor, check wiring!");
-      delay(500);
+    if (!bno.begin()) {
+      Serial.println("Failed to initialize BNO055! Check connections.");
+      while (1);
     }
+  
     bno.setExtCrystalUse(true);
-    Serial.println("IMU Initialized!\n");
+    delay(100);  // Allow the sensor to initialize
+
+    Serial.println("IMU Initialized!\n"); // Print confirmation
 
   }
 }
@@ -155,23 +162,7 @@ void setup()
 // Main loop
 void loop()
 {
-  // Currently pulling incoming data of wifi (Object Detection)
-  if(hostNetwork)
-  {
-    char incomingPacket[512];  // Buffer for incoming packets
-
-    int packetSize = udp.parsePacket();
-    if (packetSize > 0) {
-        // Read the packet into the buffer
-        int len = udp.read(incomingPacket, sizeof(incomingPacket) - 1);  // Leave space for null-terminator
-        if (len > 0) {
-            incomingPacket[len] = '\0';  // Null-terminate the string
-        }
-
-        // Print the incoming packet
-        Serial.printf("%s\n", incomingPacket);
-    }
-  }
+  Serial.println("New Iteration:");
 
   // Sonar data readings
   if(useSonar)
@@ -205,34 +196,92 @@ void loop()
   // IMU data readings
   if(useImu)
   {
-    /* Get a new sensor event */ 
-    sensors_event_t event; 
-    bno.getEvent(&event);
-    
-    /* Display the floating point data */
-    Serial.print("X: ");
-    Serial.print(event.orientation.x, 4);
-    Serial.print("\tY: ");
-    Serial.print(event.orientation.y, 4);
-    Serial.print("\tZ: ");
-    Serial.print(event.orientation.z, 4);
-    Serial.println();
+    bno.getEvent(&event); // Get current data
+    yaw = event.orientation.x; // Extract yaw
+    pitch = event.orientation.y; // Extract pitch
+    roll = event.orientation.z; // Extract roll
 
+    // Print Data readings
+    Serial.print("Yaw: "); Serial.print(yaw); Serial.print(", "); // deg cw+
+    Serial.print("Pitch: "); Serial.print(pitch); Serial.print(", ");// deg ccw+
+    Serial.print("Roll: "); Serial.print(roll); Serial.print(", ");// deg ccw+
+    Serial.println();
   }
 
-    delay(500);
-    digitalWrite(LED, digitalRead(LED) ^ 1);  // Heartbeat
+  // Read from LiDAR
+  if(useLiDAR)
+  {
+    lidarDistance = readTFLunaDistance(); // Function to get distance
+
+    // Data Validity check
+    if (lidarDistance == 0xFFFF)
+    {
+      Serial.print("Error reading Lidar");
+    }
+    else
+    {
+      Serial.print("LiDAR Distance (cm): "); Serial.print(lidarDistance);// cm
+    }
+    Serial.println();
+  }
+
+  // Currently pulling incoming data of wifi (Object Detection)
+  if(hostNetwork && useCV)
+  {
+    char incomingPacket[512];  // Buffer for incoming packets
+
+    int packetSize = udp.parsePacket();
+    if (packetSize > 0) {
+        // Read the packet into the buffer
+        int len = udp.read(incomingPacket, sizeof(incomingPacket) - 1);  // Leave space for null-terminator
+        if (len > 0) {
+            incomingPacket[len] = '\0';  // Null-terminate the string
+        }
+
+        // Print the incoming packet
+        Serial.printf("%s\n", incomingPacket);
+    }
+  }
+
+  delay(100); // Delay
+  digitalWrite(LED, digitalRead(LED) ^ 1);  // Heartbeat
 }
 
 /////////////// Functions ///////////////
-long readSonarDistance(int trigPin, int echoPin) {
-    digitalWrite(trigPin, LOW);
-    delayMicroseconds(2);
-    digitalWrite(trigPin, HIGH);
-    delayMicroseconds(10);
-    digitalWrite(trigPin, LOW);
 
-    long duration = pulseIn(echoPin, HIGH);
-    return duration * 0.034 / 2;
+// Read Sonar distance function with trigger and echo pins at inputs
+long readSonarDistance(int trigPin, int echoPin)
+{
+  // Send out pulse
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+
+  // Recieve return data
+  long duration = pulseIn(echoPin, HIGH);
+
+  // Return distance in cm
+  return duration * 0.034 / 2;
 }
 
+// Simplified function to read LiDAR distance over I2C
+uint16_t readTFLunaDistance()
+{
+  Wire.beginTransmission(TFLUNA_I2C_ADDR); // Open data line
+  Wire.write(0x00);  // Request distance data
+  Wire.endTransmission(); // Close data line
+
+  // Request 2 bytes (distance low and high bytes)
+  if (Wire.requestFrom(TFLUNA_I2C_ADDR, (uint8_t)2) == 2)
+  {
+    uint16_t distance = Wire.read();      // Low byte of distance
+    distance |= Wire.read() << 8;         // High byte of distance
+    return distance;                      // Return Distance
+  } 
+  else
+  {
+    return 0xFFFF;  // Error code for insufficient bytes received
+  }
+}
