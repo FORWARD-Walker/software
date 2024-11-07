@@ -9,20 +9,34 @@
 #include "WiFi.h"
 #include <WiFiUdp.h>
 #include <WebServer.h>
+#include <Wire.h> // I2C
+#include <Adafruit_Sensor.h>
+#include <Adafruit_BNO055.h>
+#include <utility/imumaths.h>
 
 
 // # Defines
 #define LED 2 // For LED Heartbeat
 #define PORT 12345 // server port 
+#define IMU_I2C_ADDR 0x28 // IMU I2C addr
+#define IMU_DEV_ID -1
+
+// Sonar Pins
 #define TRIG1 32 // Trigger pin for sensor 1
-#define ECHO1 34 // Echo pin for sensor 1
+#define ECHO1 36 // Echo pin for sensor 1
 #define TRIG2 33 // Trigger pin for sensor 2
-#define ECHO2 35 // Echo pin for sensor 2
+#define ECHO2 39 // Echo pin for sensor 2
+#define TRIG3 25 // Trigger pin for sensor 3
+#define ECHO3 34 // Echo pin for sensor 3
+#define TRIG4 26 // Trigger pin for sensor 4
+#define ECHO4 35 // Echo pin for sensor 4
 
 // Boolean flags
 bool useWiFi = false; // Set to use WiFi
-bool hostNetwork = true; // Set to host network
-bool sonar = false; // Set to use sonar functions
+bool hostNetwork = false; // Set to host network
+bool useSonar = true; // Set to use sonar functions
+bool useLiDAR = false; // Set to use LiDAR functions
+bool useImu = true; // Set to use IMU
 
 // WiFi global variables
 const char* ssid = ""; // Wifi network name
@@ -33,8 +47,14 @@ WiFiUDP udp; // UDP object
 WebServer server(80);
 
 // Global Variables for Sensor
-long duration1, distance1 = -1; // Store duration and distance for sensor 1
-long duration2, distance2 = -1; // Store duration and distance for sensor 2
+long sonarDistance_1 = -1; // Store duration and distance for sensor 1
+long sonarDistance_2 = -1; // Store duration and distance for sensor 2
+long sonarDistance_3 = -1; // Store duration and distance for sensor 2
+long sonarDistance_4 = -1; // Store duration and distance for sensor 2
+
+// IMU Global Var
+Adafruit_BNO055 bno = Adafruit_BNO055(IMU_DEV_ID, IMU_I2C_ADDR, &Wire);
+
 
 // Setup Code
 void setup()
@@ -105,20 +125,37 @@ void setup()
   }
 
   // Setup Sonar sensors if connected
-  if(sonar)
+  if(useSonar)
   {
     // Set pin directions
     pinMode(TRIG1, OUTPUT);
     pinMode(ECHO1, INPUT);
     pinMode(TRIG2, OUTPUT);
     pinMode(ECHO2, INPUT);
+    pinMode(TRIG3, OUTPUT);
+    pinMode(ECHO3, INPUT);
+    pinMode(TRIG4, OUTPUT);
+    pinMode(ECHO4, INPUT);
+  }
+
+  // Intialize IMU object
+  if(useImu)
+  {
+    while(!bno.begin())
+    {
+      Serial.println("Could not find a valid BNO sensor, check wiring!");
+      delay(500);
+    }
+    bno.setExtCrystalUse(true);
+    Serial.println("IMU Initialized!\n");
+
   }
 }
 
 // Main loop
 void loop()
 {
-  // Data transmit reading
+  // Currently pulling incoming data of wifi (Object Detection)
   if(hostNetwork)
   {
     char incomingPacket[512];  // Buffer for incoming packets
@@ -136,31 +173,59 @@ void loop()
     }
   }
 
-  // Sensor data readings
-  if(sonar)
+  // Sonar data readings
+  if(useSonar)
   {   
     // Obtain distance 
-    distance1 = readDistance(TRIG1, ECHO1);
-    distance2 = readDistance(TRIG2, ECHO2);
+    sonarDistance_1 = readSonarDistance(TRIG1, ECHO1);
+    sonarDistance_2 = readSonarDistance(TRIG2, ECHO2);
+    sonarDistance_3 = readSonarDistance(TRIG3, ECHO3);
+    sonarDistance_4 = readSonarDistance(TRIG4, ECHO4);
 
     // Print results to the serial monitor
     Serial.print("S1: ");
-    Serial.print(distance1);
+    Serial.print(sonarDistance_1);
     Serial.print(" cm ");
 
     Serial.print("S2: ");
-    Serial.print(distance2);
+    Serial.print(sonarDistance_2);
+    Serial.print(" cm ");
+
+    Serial.print("S3: ");
+    Serial.print(sonarDistance_3);
+    Serial.print(" cm ");
+
+    Serial.print("S4: ");
+    Serial.print(sonarDistance_4);
     Serial.print(" cm ");
 
     Serial.println();
   }
 
-  delay(100);
-  digitalWrite(LED, digitalRead(LED) ^ 1);  // Heartbeat
+  // IMU data readings
+  if(useImu)
+  {
+    /* Get a new sensor event */ 
+    sensors_event_t event; 
+    bno.getEvent(&event);
+    
+    /* Display the floating point data */
+    Serial.print("X: ");
+    Serial.print(event.orientation.x, 4);
+    Serial.print("\tY: ");
+    Serial.print(event.orientation.y, 4);
+    Serial.print("\tZ: ");
+    Serial.print(event.orientation.z, 4);
+    Serial.println();
+
+  }
+
+    delay(500);
+    digitalWrite(LED, digitalRead(LED) ^ 1);  // Heartbeat
 }
 
 /////////////// Functions ///////////////
-long readDistance(int trigPin, int echoPin) {
+long readSonarDistance(int trigPin, int echoPin) {
     digitalWrite(trigPin, LOW);
     delayMicroseconds(2);
     digitalWrite(trigPin, HIGH);
