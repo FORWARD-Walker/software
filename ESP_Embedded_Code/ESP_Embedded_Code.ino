@@ -1,6 +1,6 @@
 // EEL 4914 Senior Design MCU Code
 // Developers: Tobiah Bower, Morgan Snyder, Matthew Morello
-// The Code servers to drive all process on the ESP32 MCU for our project
+// The Code serves to drive all process on the ESP32 MCU for our project
 // Features include: WiFi connectivity, data transmission over wifi, Locally 
 // hosted network, sensor data processing, motor controls, basic coding functionality
 // Located remotely in https://github.com/FORWARD-Walker/software
@@ -9,20 +9,35 @@
 #include "WiFi.h"
 #include <WiFiUdp.h>
 #include <WebServer.h>
-
+#include <Wire.h> // I2C
+#include <Adafruit_Sensor.h>
+#include <Adafruit_BNO055.h>
+#include <utility/imumaths.h>
 
 // # Defines
 #define LED 2 // For LED Heartbeat
 #define PORT 12345 // server port 
+#define IMU_I2C_ADDR 0x29 // IMU I2C addr
+#define IMU_DEV_ID 55
+#define TFLUNA_I2C_ADDR 0x10
+
+// Sonar Pins
 #define TRIG1 32 // Trigger pin for sensor 1
-#define ECHO1 34 // Echo pin for sensor 1
+#define ECHO1 36 // Echo pin for sensor 1
 #define TRIG2 33 // Trigger pin for sensor 2
-#define ECHO2 35 // Echo pin for sensor 2
+#define ECHO2 39 // Echo pin for sensor 2
+#define TRIG3 25 // Trigger pin for sensor 3
+#define ECHO3 34 // Echo pin for sensor 3
+#define TRIG4 26 // Trigger pin for sensor 4
+#define ECHO4 35 // Echo pin for sensor 4
 
 // Boolean flags
 bool useWiFi = false; // Set to use WiFi
 bool hostNetwork = true; // Set to host network
-bool sonar = false; // Set to use sonar functions
+bool useCV = true; // Set to use computer vision
+bool useSonar = false; // Set to use sonar functions
+bool useLiDAR = false; // Set to use LiDAR functions
+bool useImu = false; // Set to use IMU
 
 // WiFi global variables
 const char* ssid = ""; // Wifi network name
@@ -33,8 +48,20 @@ WiFiUDP udp; // UDP object
 WebServer server(80);
 
 // Global Variables for Sensor
-long duration1, distance1 = -1; // Store duration and distance for sensor 1
-long duration2, distance2 = -1; // Store duration and distance for sensor 2
+long sonarDistance_1 = -1; // Store duration and distance for sensor 1
+long sonarDistance_2 = -1; // Store duration and distance for sensor 2
+long sonarDistance_3 = -1; // Store duration and distance for sensor 2
+long sonarDistance_4 = -1; // Store duration and distance for sensor 2
+
+// IMU Global Var
+Adafruit_BNO055 bno = Adafruit_BNO055(IMU_DEV_ID, IMU_I2C_ADDR, &Wire);
+sensors_event_t event; // Event object
+float yaw = -1;
+float pitch = -1;
+float roll = -1;
+
+// LiDAR Global Var
+uint16_t lidarDistance = -1;
 
 // Setup Code
 void setup()
@@ -42,7 +69,11 @@ void setup()
   // Set up serial
   Serial.begin(115200); // Init Serial
   Serial.println("\nSerial Initialized!\n");  // Print confirmation
-  
+
+  // Set up I2C
+  Wire.begin();
+  Serial.println("I2C Initialized!\n"); // Print confirmation
+
   // Setup heartbeat
   pinMode(LED, OUTPUT); // Set up LED as output
   digitalWrite(LED, HIGH); // Init to high
@@ -94,32 +125,108 @@ void setup()
     udp.begin(PORT);
     Serial.print("UDP Initialized!\n");
     Serial.printf("UDP server started at port %d\n", PORT);
-
-  
-    /*const char nom[10] = "ESP32"; // Device name
-    uint8_t broadcastAddress[2][6] = {0x40, 0xf4, 0xc9, 0x12, 0xc7, 0xc7}; // AMB82 MAC
-
-    // TODO: setup host network code
-    // https://learn.sparkfun.com/tutorials/sending-sensor-data-over-wifi/all
-    // https://www.aranacorp.com/en/creating-an-esp32-network-with-esp-now/*/
   }
 
   // Setup Sonar sensors if connected
-  if(sonar)
+  if(useSonar)
   {
     // Set pin directions
     pinMode(TRIG1, OUTPUT);
     pinMode(ECHO1, INPUT);
     pinMode(TRIG2, OUTPUT);
     pinMode(ECHO2, INPUT);
+    pinMode(TRIG3, OUTPUT);
+    pinMode(ECHO3, INPUT);
+    pinMode(TRIG4, OUTPUT);
+    pinMode(ECHO4, INPUT);
+
+    Serial.println("Sonar Initialized!\n"); // Print confirmation
+  }
+
+  // Intialize IMU object
+  if(useImu)
+  {
+    if (!bno.begin()) {
+      Serial.println("Failed to initialize BNO055! Check connections.");
+      while (1);
+    }
+  
+    bno.setExtCrystalUse(true);
+    delay(100);  // Allow the sensor to initialize
+
+    Serial.println("IMU Initialized!\n"); // Print confirmation
+
   }
 }
 
 // Main loop
 void loop()
 {
-  // Data transmit reading
-  if(hostNetwork)
+  Serial.println("New Iteration:");
+
+  // Sonar data readings
+  if(useSonar)
+  {   
+    // Obtain distance 
+    sonarDistance_1 = readSonarDistance(TRIG1, ECHO1);
+    sonarDistance_2 = readSonarDistance(TRIG2, ECHO2);
+    sonarDistance_3 = readSonarDistance(TRIG3, ECHO3);
+    sonarDistance_4 = readSonarDistance(TRIG4, ECHO4);
+
+    // Print results to the serial monitor
+    Serial.print("S1: ");
+    Serial.print(sonarDistance_1);
+    Serial.print(" cm ");
+
+    Serial.print("S2: ");
+    Serial.print(sonarDistance_2);
+    Serial.print(" cm ");
+
+    Serial.print("S3: ");
+    Serial.print(sonarDistance_3);
+    Serial.print(" cm ");
+
+    Serial.print("S4: ");
+    Serial.print(sonarDistance_4);
+    Serial.print(" cm ");
+
+    Serial.println();
+  }
+
+  // IMU data readings
+  if(useImu)
+  {
+    bno.getEvent(&event); // Get current data
+    yaw = event.orientation.x; // Extract yaw
+    pitch = event.orientation.y; // Extract pitch
+    roll = event.orientation.z; // Extract roll
+
+    // Print Data readings
+    Serial.print("Yaw: "); Serial.print(yaw); Serial.print(", "); // deg cw+
+    Serial.print("Pitch: "); Serial.print(pitch); Serial.print(", ");// deg ccw+
+    Serial.print("Roll: "); Serial.print(roll); Serial.print(", ");// deg ccw+
+    Serial.println();
+  }
+
+  // Read from LiDAR
+  if(useLiDAR)
+  {
+    lidarDistance = readTFLunaDistance(); // Function to get distance
+
+    // Data Validity check
+    if (lidarDistance == 0xFFFF)
+    {
+      Serial.print("Error reading Lidar");
+    }
+    else
+    {
+      Serial.print("LiDAR Distance (cm): "); Serial.print(lidarDistance);// cm
+    }
+    Serial.println();
+  }
+
+  // Currently pulling incoming data of wifi (Object Detection)
+  if(hostNetwork && useCV)
   {
     char incomingPacket[512];  // Buffer for incoming packets
 
@@ -136,38 +243,45 @@ void loop()
     }
   }
 
-  // Sensor data readings
-  if(sonar)
-  {   
-    // Obtain distance 
-    distance1 = readDistance(TRIG1, ECHO1);
-    distance2 = readDistance(TRIG2, ECHO2);
-
-    // Print results to the serial monitor
-    Serial.print("S1: ");
-    Serial.print(distance1);
-    Serial.print(" cm ");
-
-    Serial.print("S2: ");
-    Serial.print(distance2);
-    Serial.print(" cm ");
-
-    Serial.println();
-  }
-
-  delay(100);
+  delay(100); // Delay
   digitalWrite(LED, digitalRead(LED) ^ 1);  // Heartbeat
 }
 
 /////////////// Functions ///////////////
-long readDistance(int trigPin, int echoPin) {
-    digitalWrite(trigPin, LOW);
-    delayMicroseconds(2);
-    digitalWrite(trigPin, HIGH);
-    delayMicroseconds(10);
-    digitalWrite(trigPin, LOW);
 
-    long duration = pulseIn(echoPin, HIGH);
-    return duration * 0.034 / 2;
+// Read Sonar distance function with trigger and echo pins at inputs
+long readSonarDistance(int trigPin, int echoPin)
+{
+  // Send out pulse
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+
+  // Recieve return data
+  long duration = pulseIn(echoPin, HIGH);
+
+  // Return distance in cm
+  return duration * 0.034 / 2;
 }
 
+// Simplified function to read LiDAR distance over I2C
+uint16_t readTFLunaDistance()
+{
+  Wire.beginTransmission(TFLUNA_I2C_ADDR); // Open data line
+  Wire.write(0x00);  // Request distance data
+  Wire.endTransmission(); // Close data line
+
+  // Request 2 bytes (distance low and high bytes)
+  if (Wire.requestFrom(TFLUNA_I2C_ADDR, (uint8_t)2) == 2)
+  {
+    uint16_t distance = Wire.read();      // Low byte of distance
+    distance |= Wire.read() << 8;         // High byte of distance
+    return distance;                      // Return Distance
+  } 
+  else
+  {
+    return 0xFFFF;  // Error code for insufficient bytes received
+  }
+}
