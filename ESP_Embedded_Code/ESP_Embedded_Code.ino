@@ -35,9 +35,9 @@
 bool useWiFi = false; // Set to use WiFi
 bool hostNetwork = true; // Set to host network
 bool useCV = true; // Set to use computer vision
-bool useSonar = false; // Set to use sonar functions
-bool useLiDAR = false; // Set to use LiDAR functions
-bool useImu = false; // Set to use IMU
+bool useSonar = true; // Set to use sonar functions
+bool useLiDAR = true; // Set to use LiDAR functions
+bool useImu = true; // Set to use IMU
 
 // WiFi global variables
 const char* ssid = ""; // Wifi network name
@@ -162,7 +162,7 @@ void setup()
 // Main loop
 void loop()
 {
-  Serial.println("New Iteration:");
+  Serial.println("\nNew Iteration:");
 
   // Sonar data readings
   if(useSonar)
@@ -200,11 +200,18 @@ void loop()
     yaw = event.orientation.x; // Extract yaw
     pitch = event.orientation.y; // Extract pitch
     roll = event.orientation.z; // Extract roll
+    accx = event.acceleration.x // x acel
+    accy = event.acceleration.y // y acel
+    accz = event.acceleration.z // z acel
 
     // Print Data readings
     Serial.print("Yaw: "); Serial.print(yaw); Serial.print(", "); // deg cw+
     Serial.print("Pitch: "); Serial.print(pitch); Serial.print(", ");// deg ccw+
     Serial.print("Roll: "); Serial.print(roll); Serial.print(", ");// deg ccw+
+    Serial.println();
+    Serial.print("X Accel: "); Serial.print(accx); Serial.print(", "); // deg cw+
+    Serial.print("Y Accel: "); Serial.print(accy); Serial.print(", "); // deg cw+
+    Serial.print("Z Accel: "); Serial.print(accz); Serial.print(", "); // deg cw+
     Serial.println();
   }
 
@@ -220,7 +227,8 @@ void loop()
     }
     else
     {
-      Serial.print("LiDAR Distance (cm): "); Serial.print(lidarDistance);// cm
+      Serial.print("LiDAR Distance (cm): ");
+      Serial.print(lidarDistance);// cm
     }
     Serial.println();
   }
@@ -228,8 +236,13 @@ void loop()
   // Currently pulling incoming data of wifi (Object Detection)
   if(hostNetwork && useCV)
   {
-    char incomingPacket[512];  // Buffer for incoming packets
+    // Assert bit to signal recieve a packet
+    udp.beginPacket("192.168.4.2", 12345); // IP of camera board
+    uint8_t rxFG = 1;
+    udp.write(rxFG);
+    udp.endPacket();
 
+    char incomingPacket[512];  // Buffer for incoming packets
     int packetSize = udp.parsePacket();
     if (packetSize > 0) {
         // Read the packet into the buffer
@@ -239,11 +252,11 @@ void loop()
         }
 
         // Print the incoming packet
-        Serial.printf("%s\n", incomingPacket);
+        Serial.printf("%s", incomingPacket);
     }
   }
-
-  delay(100); // Delay
+  
+  delay(1000); // Delay
   digitalWrite(LED, digitalRead(LED) ^ 1);  // Heartbeat
 }
 
