@@ -24,9 +24,7 @@
 #include "WiFi.h"
 #include "StreamIO.h"
 #include "VideoStream.h"
-#include "RTSP.h"
 #include "NNObjectDetection.h"
-#include "VideoStreamOverlay.h"
 #include "ObjectClassList.h"
 #include "WiFiUdp.h"
 
@@ -102,43 +100,53 @@ void setup() {
 }
 
 void loop() {
-    // Get results
-    std::vector<ObjectDetectionResult> results = ObjDet.getResult();
 
-    uint16_t im_h = config.height();
-    uint16_t im_w = config.width();
+  // Wait for flag to be asserted (1 byte)
+  uint8_t txFG = 0;
+  while(txFG != 1){
+    udp.read(&txFG, 1);
+    Serial.println(txFG);
+  }
 
-    // Convert the result count to string and send it
-    char resultStr[512];
-    sprintf(resultStr, "# of Objects: %d\n", ObjDet.getResultCount());
+  time_t t = time();
+  
+  // Get results
+  std::vector<ObjectDetectionResult> results = ObjDet.getResult();
 
-    if (ObjDet.getResultCount() > 0) {
-        for (uint32_t i = 0; i < ObjDet.getResultCount(); i++) {
-            int obj_type = results[i].type();
-            if (itemList[obj_type].filter) {    // check if item should NOT be ignored
+  uint16_t im_h = config.height();
+  uint16_t im_w = config.width();
 
-                ObjectDetectionResult item = results[i];
-                // Result coordinates are floats ranging from 0.00 to 1.00
-                // Multiply with RTSP resolution to get coordinates in pixels
-                int xmin = (int)(item.xMin() * im_w);
-                int xmax = (int)(item.xMax() * im_w);
-                int ymin = (int)(item.yMin() * im_h);
-                int ymax = (int)(item.yMax() * im_h);
+  // Convert the result count to string and send it
+  char resultStr[512];
+  sprintf(resultStr, "# of Objects: %d\n", ObjDet.getResultCount());
 
-                // Prepare the message string
-                char msg[64]; // Adjust size as needed
-                sprintf(msg, "Object: %s, %d, %d, %d, %d\n", item.name(), xmin, xmax, ymin, ymax);
-                strcat(resultStr, msg); // Send the formatted results
-            }
-        }
-    }
+  if (ObjDet.getResultCount() > 0) {
+      for (uint32_t i = 0; i < ObjDet.getResultCount(); i++) {
+          int obj_type = results[i].type();
+          if (itemList[obj_type].filter) {    // check if item should NOT be ignored
 
-    // Send results packet
-    strcat(resultStr, "\n");
-    writeMsg(resultStr);
+              ObjectDetectionResult item = results[i];
+              // Result coordinates are floats ranging from 0.00 to 1.00
+              // Multiply with RTSP resolution to get coordinates in pixels
+              int xmin = (int)(item.xMin() * im_w);
+              int xmax = (int)(item.xMax() * im_w);
+              int ymin = (int)(item.yMin() * im_h);
+              int ymax = (int)(item.yMax() * im_h);
 
-    // delay to wait for new results
-    delay(100);
+              // Prepare the message string
+              char msg[64]; // Adjust size as needed
+              sprintf(msg, "Object: %s, %d, %d, %d, %d\n", item.name(), xmin, xmax, ymin, ymax);
+              strcat(resultStr, msg); // Send the formatted results
+          }
+      }
+  }
+
+  // Send results packet
+  strcat(resultStr, "\n");
+  writeMsg(resultStr);
+
+  // delay to wait for new results
+  delay(100);
 }
 
 /////////////// Functions ///////////////
