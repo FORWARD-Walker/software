@@ -1,26 +1,4 @@
-/*
-
- Example guide:
- https://www.amebaiot.com/en/amebapro2-arduino-neuralnework-object-detection/
-
- NN Model Selection
- Select Neural Network(NN) task and models using modelSelect(nntask, objdetmodel, facedetmodel, facerecogmodel).
- Replace with NA_MODEL if they are not necessary for your selected NN Task.
-
- NN task
- =======
- OBJECT_DETECTION/ FACE_DETECTION/ FACE_RECOGNITION
-
- Models
- =======
- YOLOv3 model         DEFAULT_YOLOV3TINY   / CUSTOMIZED_YOLOV3TINY
- YOLOv4 model         DEFAULT_YOLOV4TINY   / CUSTOMIZED_YOLOV4TINY
- YOLOv7 model         DEFAULT_YOLOV7TINY   / CUSTOMIZED_YOLOV7TINY
- SCRFD model          DEFAULT_SCRFD        / CUSTOMIZED_SCRFD
- MobileFaceNet model  DEFAULT_MOBILEFACENET/ CUSTOMIZED_MOBILEFACENET
- No model             NA_MODEL
- */
-
+// # includes
 #include "WiFi.h"
 #include "StreamIO.h"
 #include "VideoStream.h"
@@ -28,13 +6,13 @@
 #include "ObjectClassList.h"
 #include "WiFiUdp.h"
 
+// # Defines
 #define CHANNEL 0
 #define CHANNELNN 3 
-
-// Lower resolution for NN processing
 #define NNWIDTH  576
 #define NNHEIGHT 320
 
+// Global Setup, objects, and vars
 VideoSetting config(VIDEO_FHD, 30, VIDEO_H264, 0);
 VideoSetting configNN(NNWIDTH, NNHEIGHT, 10, VIDEO_RGB, 0);
 NNObjectDetection ObjDet;
@@ -45,13 +23,12 @@ char ssid[] = "FORWARD_Network";   // your network SSID (name)
 char pass[] = "Forward?0525";       // your network password
 WiFiUDP udp; // Websocket object
 const int localPort = 12345; // Port to listen too
-int status = WL_IDLE_STATUS;
-IPAddress ip;
 
+// Set up code
 void setup() {
-    Serial.begin(115200);
+    Serial.begin(115200); // Start serial
 
-   // Attempt to connect to the access point
+    // Attempt to connect to the access point
     Serial.println("Connecting to Access Point...");
     WiFi.begin(ssid, pass);
 
@@ -71,9 +48,7 @@ void setup() {
     Serial.print("UDP server started at port: ");
     Serial.println(localPort);
 
-
     // Configure camera video channels with video format information
-    // Adjust the bitrate based on your WiFi network quality
     config.setBitrate(2 * 1024 * 1024);     // Recommend to use 2Mbps for RTSP streaming to prevent network congestion
     Camera.configVideoChannel(CHANNEL, config);
     Camera.configVideoChannel(CHANNELNN, configNN);
@@ -107,14 +82,12 @@ void loop() {
     udp.read(&txFG, 1);
     Serial.println(txFG);
   }
-
-  time_t t = time();
   
   // Get results
   std::vector<ObjectDetectionResult> results = ObjDet.getResult();
 
-  uint16_t im_h = config.height();
-  uint16_t im_w = config.width();
+  uint16_t im_h = config.height(); //1080
+  uint16_t im_w = config.width(); //1920
 
   // Convert the result count to string and send it
   char resultStr[512];
@@ -144,9 +117,6 @@ void loop() {
   // Send results packet
   strcat(resultStr, "\n");
   writeMsg(resultStr);
-
-  // delay to wait for new results
-  delay(100);
 }
 
 /////////////// Functions ///////////////

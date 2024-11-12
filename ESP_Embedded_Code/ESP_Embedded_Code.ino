@@ -20,6 +20,7 @@
 #define IMU_I2C_ADDR 0x29 // IMU I2C addr
 #define IMU_DEV_ID 55
 #define TFLUNA_I2C_ADDR 0x10
+#define FRAME_LENGTH 250 // (msec) 4 Hz
 
 // Sonar Pins
 #define TRIG1 32 // Trigger pin for sensor 1
@@ -35,9 +36,9 @@
 bool useWiFi = false; // Set to use WiFi
 bool hostNetwork = true; // Set to host network
 bool useCV = true; // Set to use computer vision
-bool useSonar = true; // Set to use sonar functions
-bool useLiDAR = true; // Set to use LiDAR functions
-bool useImu = true; // Set to use IMU
+bool useSonar = false; // Set to use sonar functions
+bool useLiDAR = false; // Set to use LiDAR functions
+bool useImu = false; // Set to use IMU
 
 // WiFi global variables
 const char* ssid = ""; // Wifi network name
@@ -59,6 +60,9 @@ sensors_event_t event; // Event object
 float yaw = -1;
 float pitch = -1;
 float roll = -1;
+float accx = -1;
+float accy = -1;
+float accz = -1;
 
 // LiDAR Global Var
 uint16_t lidarDistance = -1;
@@ -200,9 +204,9 @@ void loop()
     yaw = event.orientation.x; // Extract yaw
     pitch = event.orientation.y; // Extract pitch
     roll = event.orientation.z; // Extract roll
-    accx = event.acceleration.x // x acel
-    accy = event.acceleration.y // y acel
-    accz = event.acceleration.z // z acel
+    accx = event.acceleration.x; // x acel
+    accy = event.acceleration.y; // y acel
+    accz = event.acceleration.z;// z acel
 
     // Print Data readings
     Serial.print("Yaw: "); Serial.print(yaw); Serial.print(", "); // deg cw+
@@ -256,7 +260,7 @@ void loop()
     }
   }
   
-  delay(1000); // Delay
+  delay(FRAME_LENGTH); // Delay
   digitalWrite(LED, digitalRead(LED) ^ 1);  // Heartbeat
 }
 
