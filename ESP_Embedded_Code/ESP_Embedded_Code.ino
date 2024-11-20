@@ -52,6 +52,7 @@ long sonarDistance_1 = -1; // Store duration and distance for sensor 1
 long sonarDistance_2 = -1; // Store duration and distance for sensor 2
 long sonarDistance_3 = -1; // Store duration and distance for sensor 2
 long sonarDistance_4 = -1; // Store duration and distance for sensor 2
+float c = 0.034326; // speed of sound (cm/microsecond)
 
 // IMU Global Var
 Adafruit_BNO055 bno = Adafruit_BNO055(IMU_DEV_ID, IMU_I2C_ADDR, &Wire);
@@ -168,10 +169,13 @@ void loop()
   if(useSonar)
   {   
     // Obtain distance 
-    sonarDistance_1 = readSonarDistance(TRIG1, ECHO1);
-    sonarDistance_2 = readSonarDistance(TRIG2, ECHO2);
-    sonarDistance_3 = readSonarDistance(TRIG3, ECHO3);
-    sonarDistance_4 = readSonarDistance(TRIG4, ECHO4);
+    sonarDistance_1 = readSonarDuration(TRIG1, ECHO1)*(c/2);
+    delay(1);
+    sonarDistance_2 = readSonarDuration(TRIG2, ECHO2)*(c/2);
+    delay(1);
+    sonarDistance_3 = readSonarDuration(TRIG3, ECHO3)*(c/2);
+    delay(1);
+    sonarDistance_4 = readSonarDuration(TRIG4, ECHO4)*(c/2);
 
     // Print results to the serial monitor
     Serial.print("S1: ");
@@ -262,8 +266,8 @@ void loop()
 
 /////////////// Functions ///////////////
 
-// Read Sonar distance function with trigger and echo pins at inputs
-long readSonarDistance(int trigPin, int echoPin)
+// Read Sonar duration function with trigger and echo pins at inputs
+long readSonarDuration(int trigPin, int echoPin)
 {
   // Send out pulse
   digitalWrite(trigPin, LOW);
@@ -275,8 +279,8 @@ long readSonarDistance(int trigPin, int echoPin)
   // Recieve return data
   long duration = pulseIn(echoPin, HIGH);
 
-  // Return distance in cm
-  return duration * 0.034 / 2;
+  // Return duration in microseconds (\mu s)
+  return duration;
 }
 
 // Simplified function to read LiDAR distance over I2C
