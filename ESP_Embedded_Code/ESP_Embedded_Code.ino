@@ -20,7 +20,7 @@
 #define IMU_I2C_ADDR 0x29 // IMU I2C addr
 #define IMU_DEV_ID 55
 #define TFLUNA_I2C_ADDR 0x10
-#define FRAME_LENGTH 250 // (msec) 4 Hz
+#define FRAME_LENGTH 1000 // (msec) 4 Hz
 
 // Sonar Pins
 #define TRIG1 32 // Trigger pin for sensor 1
@@ -36,7 +36,7 @@
 bool useWiFi = false; // Set to use WiFi
 bool hostNetwork = true; // Set to host network
 bool useCV = true; // Set to use computer vision
-bool useSonar = false; // Set to use sonar functions
+bool useSonar = true; // Set to use sonar functions
 bool useLiDAR = false; // Set to use LiDAR functions
 bool useImu = false; // Set to use IMU
 
