@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 
-// Sonar Class
+// LiDAR Class
 class Lidar
 {
 private:

@@ -81,14 +81,14 @@ void setup()
   // Setup if ESP32 is hosting a network
   if(hostNetwork)
   {
-    pNetworking = new Networking();
+    pNetworking = new Networking();  // Init object
     Serial.println("Network Initialized!\n");
   }
 
   // Setup Sonar sensors if connected
   if(useSonar)
   {
-  // Initizalize the Sonar objects
+    // Initizalize the Sonar objects
     pS1 = new Sonar(TRIG1, ECHO1);
     pS2 = new Sonar(TRIG2, ECHO2);
     pS3 = new Sonar(TRIG3, ECHO3);
@@ -99,24 +99,22 @@ void setup()
   // Initizalize the LiDAR object
   if(useLiDAR)
   {
-    // init object
-    pLidar = new Lidar();
+    pLidar = new Lidar();  // Init object
     Serial.println("LiDAR Initialized!\n");
   }
 
   // Intialize IMU object
   if(useImu)
   {
-    pIMU = new Imu();
-    delay(100);  // Allow the sensor to initialize
+    pIMU = new Imu(); // Init object
     Serial.println("IMU Initialized!\n"); // Print confirmation
   }
 
   // Initialize Haptics Objects
   if(useHaptics)
   {
-    pHapticL = new Haptic(LMP1, LMP2, LME);
-    pHapticR = new Haptic(RMP1, RMP2, RME);
+    pHapticL = new Haptic(LMP1, LMP2, LME);  // Init object
+    pHapticR = new Haptic(RMP1, RMP2, RME);  // Init object
     Serial.println("Haptics Initialized!\n"); // Print confirmation
   }
 }
@@ -124,31 +122,38 @@ void setup()
 // Main loop
 void loop()
 {
-  // // // Currently pulling incoming data of wifi (Object Detection)
-  // if(pNetworking && useCV)
-  // {
-  //   char data[512];
-  //   pNetworking->getUDPPacket(data, sizeof(data));
-  //   Serial.println(data);
-  // }
+  // Sonar pointer check
+  if(pS1 && pS2 && pS3 && pS4)
+  {
+    // If an object to be within a meter on the sides or 3 meters in front
+    if((pS1 < 100) || (pS2 < 300) || (pS3 < 300) || (pS4 < 100))
+    {
+      // Check Camera data
+      int numObj = -1;
+      if(pNetworking && useCV)
+      {
+        char data[512];
+        pNetworking->getUDPPacket(data, sizeof(data));
 
-  // // If we have haptics
-  // if(pHapticL && pS1 && pS2)
-  // {
-  //   while(pS1->readDistance() < 50 || pS2->readDistance() < 150){
-  //     pHapticL->startHaptic(1);
-  //     while(pS1->readDistance() < 30 || pS2->readDistance() < 90){
-  //       pHapticL->startHaptic(2);
-  //       while(pS1->readDistance() < 10 || pS2->readDistance() < 30){
-  //         pHapticL->startHaptic(3);
-  //       }
-  //       pHapticL->stopHaptic();
-  //     }
-  //     pHapticL->stopHaptic();
-  //   }
-  //   pHapticL->stopHaptic();
-  // }
-  
+        // Parse data to store
+        // Number of objects
+        // Each object data
+      }
+
+      // Check for special cases
+      if(numObj > 3)
+      {
+        // Check if all objects are car, person, etc.
+      }
+
+      // Check if we have identified object
+      if(numObj > 0)
+      {
+        // Call GNC loop
+      }
+    }
+  }
+
   delay(FRAME_LENGTH); // Delay
   digitalWrite(LED, digitalRead(LED) ^ 1);  // Heartbeat
 }

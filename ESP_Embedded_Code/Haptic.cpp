@@ -25,7 +25,6 @@ void Haptic::setup()
     ledcAttachChannel(this->enPin, freq, resolution, pwmChannel);
 }
 
-// Simplified function to read Haptic distance over I2C
 void Haptic::startHaptic(int level)
 {
     // Determine duty cycles
