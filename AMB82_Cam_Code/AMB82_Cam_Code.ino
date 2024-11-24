@@ -80,7 +80,6 @@ void loop() {
   uint8_t txFG = 0;
   while(txFG != 1){
     udp.read(&txFG, 1);
-    Serial.println(txFG);
   }
   
   // Get results
