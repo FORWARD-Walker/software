@@ -5,7 +5,7 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BNO055.h>
 
-// Sonar Class
+// IMU Class
 class Imu
 {
 private:

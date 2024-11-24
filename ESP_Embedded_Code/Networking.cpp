@@ -23,18 +23,14 @@ void Networking::setup()
     WiFi.softAP(ssid, password);
 
     // Serial out server init
-    Serial.println("Server Initialized!");
-    Serial.print("AP IP address: ");
-    Serial.println(WiFi.softAPIP());
-    Serial.println();
+    Serial.printf("Server Initialized @ APIP: %s!\n", IP_ADDR);
 
     // Start the server
     server.begin();
 
     // UDP server setup
     udp.begin(PORT);
-    Serial.print("UDP Initialized!\n");
-    Serial.printf("UDP server started at port %d\n", PORT);
+    Serial.printf("UDP Initialized @ PORT: %d!\n", PORT);
 }
 
 // Simplified function to read Networking distance over I2C
@@ -47,7 +43,7 @@ void Networking::getUDPPacket(char* data, size_t dataSize) {
     udp.endPacket();
 
     // Wait for the packet
-    delay(20);
+    delay(30);
     int packetSize = udp.parsePacket();
     if (packetSize > 0) {
         int len = udp.read(data, dataSize - 1);

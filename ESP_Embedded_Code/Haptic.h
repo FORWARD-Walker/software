@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 
-// Sonar Class
+// Haptic Class
 class Haptic
 {
 private:

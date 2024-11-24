@@ -4,7 +4,7 @@
 #include <WiFiUdp.h>
 #include <Arduino.h>
 
-// Sonar Class
+// Networking Class
 class Networking
 {
 private:
