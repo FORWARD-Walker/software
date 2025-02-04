@@ -13,11 +13,13 @@ Lidar::Lidar()
 // Set up object
 void Lidar::setup()
 {
-    // Currently nothing needed
+
+    this->distance = 0;
+
 }
 
 // Simplified function to read LiDAR distance over I2C
-uint16_t Lidar::readDistance()
+void Lidar::readDistance()
 {
     Wire.beginTransmission(TFLUNA_I2C_ADDR); // Open data line
     Wire.write(0x00);                        // Request distance data
@@ -28,11 +30,11 @@ uint16_t Lidar::readDistance()
     {
         uint16_t distance = Wire.read(); // Low byte of distance
         distance |= Wire.read() << 8;    // High byte of distance
-        return distance;
+        this->distance = distance;
     }
     else
     {
         Serial.print("Error reading Lidar"); // Error code for insufficient bytes received
-        return -1;
+        this->distance = -1;
     }
 }
