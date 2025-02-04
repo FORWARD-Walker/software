@@ -56,3 +56,15 @@ void Haptic::stopHaptic()
     digitalWrite(this->motorPin2, LOW);
     delay(50);
 }
+
+// Print to serial the current pinouts
+void Haptic::printPins()
+{
+    Serial.print("Motor Pin 1: ");
+    Serial.print(this->motorPin1);
+    Serial.print(" Motor Pin 2: ");
+    Serial.print(this->motorPin2);
+    Serial.print(" Enable Pin: ");
+    Serial.print(this->enPin);
+    Serial.println();
+}

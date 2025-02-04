@@ -7,10 +7,13 @@
 class Lidar
 {
 private:
+
 public:
     Lidar();      // Clas constructor
     void setup(); // Setup function
-    uint16_t readDistance();
+    int distance; // Stores latest distance
+    void readDistance();
+
 };
 
 #endif

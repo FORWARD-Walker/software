@@ -15,7 +15,7 @@
 
 // # Defines
 #define LED 2 // For LED Heartbeat
-#define FRAME_LENGTH 1000 // (msec) [1000 = 1 Hz, 500 = 2 Hz, 250 = 4 Hz, 100 = 10 Hz, 33 = 30 Hz]
+#define FRAME_LENGTH 33 // (msec) [1000 = 1 Hz, 500 = 2 Hz, 250 = 4 Hz, 100 = 10 Hz, 33 = 30 Hz]
 
 // Sonar Pins
 #define TRIG1 32 // Trigger pin for sensor 1
@@ -36,12 +36,12 @@
 #define RME 12  // Haptic motor 2 enable pin
 
 // Boolean flags
-bool hostNetwork = false; // Set to host network
-bool useCV = false; // Set to use computer vision
-bool useSonar = false; // Set to use sonar functions
-bool useLiDAR = false; // Set to use LiDAR functions
-bool useImu = false; // Set to use IMU
-bool useHaptics = false; // Set to use Haptics
+bool hostNetwork = true; // Set to host network
+bool useCV = true; // Set to use computer vision
+bool useSonar = true; // Set to use sonar functions
+bool useLiDAR = true; // Set to use LiDAR functions
+bool useImu = true; // Set to use IMU
+bool useHaptics = true; // Set to use Haptics
 
 // Network Object
 Networking* pNetworking;
@@ -61,6 +61,17 @@ Lidar* pLidar;
 // Haptic Objects
 Haptic* pHapticL;
 Haptic* pHapticR;
+
+// Control flags
+boolean s1FG = false;
+boolean s2FG = false;
+boolean s3FG = false;
+boolean s4FG = false;
+boolean buzzLeft = false;
+boolean buzzRight = false;
+
+// Function Prototype
+void Update_Data();
 
 // Setup Code
 void setup()
@@ -90,9 +101,13 @@ void setup()
   {
     // Initizalize the Sonar objects
     pS1 = new Sonar(TRIG1, ECHO1);
+    pS1->printPins();
     pS2 = new Sonar(TRIG2, ECHO2);
+    pS2->printPins();
     pS3 = new Sonar(TRIG3, ECHO3);
+    pS3->printPins();
     pS4 = new Sonar(TRIG4, ECHO4);
+    pS4->printPins();
     Serial.println("Sonar Initialized!\n"); // Print confirmation
   }
 
@@ -114,7 +129,9 @@ void setup()
   if(useHaptics)
   {
     pHapticL = new Haptic(LMP1, LMP2, LME);  // Init object
+    pHapticL->printPins();
     pHapticR = new Haptic(RMP1, RMP2, RME);  // Init object
+    pHapticR->printPins();
     Serial.println("Haptics Initialized!\n"); // Print confirmation
   }
 }
@@ -122,11 +139,55 @@ void setup()
 // Main loop
 void loop()
 {
-  // Sonar pointer check
+  Update_Data(); // Update Sensor data
+  
+  // Reset Flags
+  s1FG = false;
+  s2FG = false;
+  s3FG = false;
+  s4FG = false;
+
+  // Null pointer check sonar sensors
   if(pS1 && pS2 && pS3 && pS4)
   {
-    // If an object to be within a meter on the sides or 3 meters in front
-    if((pS1 < 100) || (pS2 < 300) || (pS3 < 300) || (pS4 < 100))
+    // Check if object is on the left
+    if(pS1->distance < 100)
+    {
+      Serial.println("Object within 1 meter on the left!");
+      Serial.print("S1: ");
+      Serial.println(pS1->distance);
+      s1FG = true;
+    }
+
+    // Check if object is on the front left
+    if(pS2->distance < 300)
+    {
+      Serial.println("Object within 3 meters in front Left!");
+      Serial.print("S2: ");
+      Serial.println(pS2->distance);
+      s2FG = true;
+    }
+
+    // Check if object is on the front right
+    if (pS3->distance < 300)
+    { 
+      Serial.println("Object within 3 meters in front right!");
+      Serial.print("S3: ");
+      Serial.println(pS3->distance);
+      s3FG = true;
+    }
+
+    // Check if an object is on the right
+    if(pS4->distance < 100)
+    {
+      Serial.println("Object within 1 meter on the right!");
+      Serial.print("S4: ");
+      Serial.println(pS4->distance);
+      s4FG = true;
+    }
+
+    // Classify Object
+    if (s1FG || s2FG || s3FG || s4FG)
     {
       // Check Camera data
       int numObj = -1;
@@ -134,22 +195,12 @@ void loop()
       {
         char data[512];
         pNetworking->getUDPPacket(data, sizeof(data));
+        Serial.println("\nObject Data: ");
+        Serial.println(data);
 
         // Parse data to store
         // Number of objects
         // Each object data
-      }
-
-      // Check for special cases
-      if(numObj > 3)
-      {
-        // Check if all objects are car, person, etc.
-      }
-
-      // Check if we have identified object
-      if(numObj > 0)
-      {
-        // Call GNC loop
       }
     }
   }
@@ -158,3 +209,28 @@ void loop()
   digitalWrite(LED, digitalRead(LED) ^ 1);  // Heartbeat
 }
 
+
+// Update Sensor Data
+void Update_Data()
+{
+  // Update Sonar Distances
+  if(pS1 && pS2 && pS3 && pS4)
+  {
+    pS1->readDistance();
+    pS2->readDistance();
+    pS3->readDistance();
+    pS4->readDistance();
+  }
+
+  // Update LiDAR Distances
+  if(pLidar)
+  {
+    pLidar->readDistance();
+  }
+
+  // Update IMU readings
+  if(pIMU)
+  {
+    pIMU->updateData();
+  }
+}

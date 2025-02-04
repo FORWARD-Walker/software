@@ -14,9 +14,10 @@ private:
 
 public:
     Haptic(int motorPin1, int motorPin2, int enPin);
-    void setup(); // Setup function
-    void startHaptic(int level);
-    void stopHaptic();
+    void setup();                // Setup function
+    void startHaptic(int level); // Start the haptic motor
+    void stopHaptic();           // Stop the haptic motor
+    void printPins();            // Print pin out
 };
 
 #endif
