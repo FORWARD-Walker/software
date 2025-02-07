@@ -11,6 +11,8 @@ Haptic::Haptic(int motorPin1, int motorPin2, int enPin)
     this->motorPin2 = motorPin2;
     this->enPin = enPin;
     this->setup();
+    this->buzzing = false;
+    this->curSpeed = 0;
 }
 
 // Set up object
@@ -40,6 +42,8 @@ void Haptic::startHaptic(int level)
     {
         dutyCycle = 255;
     }
+    this->curSpeed = level;
+    this->buzzing = true;
 
     ledcWrite(this->enPin, dutyCycle);
 
@@ -54,7 +58,8 @@ void Haptic::stopHaptic()
     // Stop the haptic motor
     digitalWrite(this->motorPin1, LOW);
     digitalWrite(this->motorPin2, LOW);
-    delay(50);
+    this->curSpeed = 0;
+    this->buzzing = false;
 }
 
 // Print to serial the current pinouts

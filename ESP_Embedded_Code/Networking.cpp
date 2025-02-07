@@ -4,16 +4,16 @@
 #define PORT 12345
 
 // Create object
-Networking::Networking()
+Networking::Networking() : server(80)
 {
     this->setup();
+    this->dBuffCtr = 0;
+    this->dataBuffer = "";
 }
 
 // Set up object
 void Networking::setup()
 {
-    WebServer server(80);
-
     const char *ssid = "FORWARD_Network";  // Network name
     const char *password = "Forward?0525"; // Network password
 
@@ -27,6 +27,10 @@ void Networking::setup()
     // Start the UDP server
     udp.begin(PORT);
     Serial.printf("UDP Server listening on port %d\n", PORT);
+
+    // Set up the HTTP server route(s)
+    server.on("/", HTTP_GET, std::bind(&Networking::handleRoot, this));
+    server.begin();
 }
 
 // Simplified function to read Networking distance over I2C
@@ -51,3 +55,33 @@ void Networking::getUDPPacket(char *data, size_t dataSize)
         }
     }
 }
+
+// Handle new connection
+void Networking::handleRoot()
+{
+    String html = "<html><head><title>ESP32 Data</title></head><body>";
+    html += "<h1>Serial Data:</h1>";
+    html += "<pre>" + dataBuffer + "</pre>";
+    html += "</body></html>";
+    server.send(200, "text/html", html);
+}
+
+// Push Serial data
+void Networking::pushSerialData(String data)
+{
+    this->dataBuffer += data + "\n"; // Append new data with a newline
+    this->dBuffCtr++; // Inc data buffer
+    if(dBuffCtr > 100)
+    {
+      this->dataBuffer = "";
+      this->dBuffCtr = 0;
+    }
+}
+
+// Update server
+void Networking::update()
+{
+    server.handleClient();
+}
+
+

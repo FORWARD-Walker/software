@@ -18,6 +18,10 @@ public:
     void startHaptic(int level); // Start the haptic motor
     void stopHaptic();           // Stop the haptic motor
     void printPins();            // Print pin out
+
+    // State Variables
+    bool buzzing;
+    int curSpeed;
 };
 
 #endif

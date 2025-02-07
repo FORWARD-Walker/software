@@ -12,6 +12,7 @@
 #include "Imu.h"
 #include "Networking.h"
 #include "Haptic.h"
+#include "Wheel.h"
 
 // # Defines
 #define LED 2 // For LED Heartbeat
@@ -28,12 +29,18 @@
 #define ECHO4 35 // Echo pin for sensor 4
 
 // Haptic pins
-#define LMP1 19 // Haptic motor 1 pin 2
-#define LMP2 18 // Haptic motor 1 pin 2
-#define LME 14  // Haptic motor 1 enable pin
-#define RMP1 17 // Haptic motor 2 pin 1
-#define RMP2 16 // Haptic motor 2 pin 2
-#define RME 12  // Haptic motor 2 enable pin
+#define LHMP1 19 // Left Haptic motor pin 1
+#define LHMP2 18 // Left Haptic motor pin 2
+#define LHME 27  // Left Haptic motor enable pin
+#define RHMP1 17 // Right Haptic motor pin 1
+#define RHMP2 16 // Right Haptic motor pin 2
+#define RHME 14  // Right Haptic motor enable pin
+
+// Wheel Pins
+#define LWMPF 4 // Left Wheel motor pin 1
+#define LWMPR 0 // Left Wheel motor pin 2
+#define RWMPF 2 // Right Wheel motor pin 1
+#define RWMPR 15 // Right Wheel motor pin 2
 
 // Boolean flags
 bool hostNetwork = true; // Set to host network
@@ -42,36 +49,33 @@ bool useSonar = true; // Set to use sonar functions
 bool useLiDAR = true; // Set to use LiDAR functions
 bool useImu = true; // Set to use IMU
 bool useHaptics = true; // Set to use Haptics
+bool useWheels = true; // Set to use Wheels
 
 // Network Object
-Networking* pNetworking;
+Networking* pNetworking = NULL;
 
 // Sensor Objects
-Sonar* pS1;
-Sonar* pS2;
-Sonar* pS3;
-Sonar* pS4;
+Sonar* pS1 = NULL;
+Sonar* pS2 = NULL;
+Sonar* pS3 = NULL;
+Sonar* pS4 = NULL;
 
 // IMU Object
-Imu* pIMU;
+Imu* pIMU = NULL;
 
 // LiDAR Object
-Lidar* pLidar;
+Lidar* pLidar = NULL;
 
 // Haptic Objects
-Haptic* pHapticL;
-Haptic* pHapticR;
+Haptic* pHapticL = NULL;
+Haptic* pHapticR = NULL;
 
-// Control flags
-boolean s1FG = false;
-boolean s2FG = false;
-boolean s3FG = false;
-boolean s4FG = false;
-boolean buzzLeft = false;
-boolean buzzRight = false;
+// Wheel Objects
+Wheel* pWheelL = NULL;
+Wheel* pWheelR = NULL;
 
-// Function Prototype
 void Update_Data();
+void Test_System();
 
 // Setup Code
 void setup()
@@ -128,11 +132,21 @@ void setup()
   // Initialize Haptics Objects
   if(useHaptics)
   {
-    pHapticL = new Haptic(LMP1, LMP2, LME);  // Init object
+    pHapticL = new Haptic(LHMP1, LHMP2, LHME);  // Init object
     pHapticL->printPins();
-    pHapticR = new Haptic(RMP1, RMP2, RME);  // Init object
+    pHapticR = new Haptic(RHMP1, RHMP2, RHME);  // Init object
     pHapticR->printPins();
     Serial.println("Haptics Initialized!\n"); // Print confirmation
+  }
+
+  // Initialize Wheel Objects
+  if(useWheels)
+  {
+    pWheelL = new Wheel(LWMPF, LWMPR);  // Init object
+    pWheelL->printPins();
+    pWheelR = new Wheel(RWMPF, RWMPR);  // Init object
+    pWheelR->printPins();
+    Serial.println("Wheels Initialized!\n"); // Print confirmation
   }
 }
 
@@ -140,97 +154,142 @@ void setup()
 void loop()
 {
   Update_Data(); // Update Sensor data
-  
-  // Reset Flags
-  s1FG = false;
-  s2FG = false;
-  s3FG = false;
-  s4FG = false;
+  Test_System(); // Test System
 
-  // Null pointer check sonar sensors
-  if(pS1 && pS2 && pS3 && pS4)
-  {
-    // Check if object is on the left
-    if(pS1->distance < 100)
-    {
-      Serial.println("Object within 1 meter on the left!");
-      Serial.print("S1: ");
-      Serial.println(pS1->distance);
-      s1FG = true;
-    }
+  // // Null pointer check sonar sensors
+  // if(pS1 && pS2 && pS3 && pS4)
+  // {
+  //   // Check if object is on the left
+  //   if(pS1->distance < 100)
+  //   {
+  //     Serial.println("Object within 1 meter on the left!");
+  //     Serial.print("S1: ");
+  //     Serial.println(pS1->distance);
+  //     s1FG = true;
+  //   }
 
-    // Check if object is on the front left
-    if(pS2->distance < 300)
-    {
-      Serial.println("Object within 3 meters in front Left!");
-      Serial.print("S2: ");
-      Serial.println(pS2->distance);
-      s2FG = true;
-    }
+  //   // Check if object is on the front left
+  //   if(pS2->distance < 300)
+  //   {
+  //     Serial.println("Object within 3 meters in front Left!");
+  //     Serial.print("S2: ");
+  //     Serial.println(pS2->distance);
+  //     s2FG = true;
+  //   }
 
-    // Check if object is on the front right
-    if (pS3->distance < 300)
-    { 
-      Serial.println("Object within 3 meters in front right!");
-      Serial.print("S3: ");
-      Serial.println(pS3->distance);
-      s3FG = true;
-    }
+  //   // Check if object is on the front right
+  //   if (pS3->distance < 300)
+  //   { 
+  //     Serial.println("Object within 3 meters in front right!");
+  //     Serial.print("S3: ");
+  //     Serial.println(pS3->distance);
+  //     s3FG = true;
+  //   }
 
-    // Check if an object is on the right
-    if(pS4->distance < 100)
-    {
-      Serial.println("Object within 1 meter on the right!");
-      Serial.print("S4: ");
-      Serial.println(pS4->distance);
-      s4FG = true;
-    }
+  //   // Check if an object is on the right
+  //   if(pS4->distance < 100)
+  //   {
+  //     Serial.println("Object within 1 meter on the right!");
+  //     Serial.print("S4: ");
+  //     Serial.println(pS4->distance);
+  //     s4FG = true;
+  //   }
 
-    // Classify Object
-    if (s1FG || s2FG || s3FG || s4FG)
-    {
-      // Check Camera data
-      int numObj = -1;
-      if(pNetworking && useCV)
-      {
-        char data[512];
-        pNetworking->getUDPPacket(data, sizeof(data));
-        Serial.println("\nObject Data: ");
-        Serial.println(data);
+  //   // Classify Object
+  //   if (s1FG || s2FG || s3FG || s4FG)
+  //   {
+  //     // Check Camera data
+  //     int numObj = -1;
+  //     if(pNetworking && useCV)
+  //     {
+  //       char data[512];
+  //       pNetworking->getUDPPacket(data, sizeof(data));
+  //       Serial.println("\nObject Data: ");
+  //       Serial.println(data);
 
-        // Parse data to store
-        // Number of objects
-        // Each object data
-      }
-    }
-  }
+  //       // Parse data to store
+  //       // Number of objects
+  //       // Each object data
+  //     }
+  //   }
+  // }
 
   delay(FRAME_LENGTH); // Delay
   digitalWrite(LED, digitalRead(LED) ^ 1);  // Heartbeat
 }
 
-
 // Update Sensor Data
 void Update_Data()
 {
-  // Update Sonar Distances
-  if(pS1 && pS2 && pS3 && pS4)
-  {
-    pS1->readDistance();
-    pS2->readDistance();
-    pS3->readDistance();
-    pS4->readDistance();
-  }
+    // Update Sonar Distances
+    if (pS1 && pS2 && pS3 && pS4)
+    {
+        pS1->readDistance();
+        pS2->readDistance();
+        pS3->readDistance();
+        pS4->readDistance();
+    }
 
-  // Update LiDAR Distances
-  if(pLidar)
-  {
-    pLidar->readDistance();
-  }
+    // Update LiDAR Distances
+    if (pLidar)
+    {
+        pLidar->readDistance();
+    }
 
-  // Update IMU readings
-  if(pIMU)
-  {
-    pIMU->updateData();
-  }
+    // Update IMU readings
+    if (pIMU)
+    {
+        pIMU->updateData();
+    }
 }
+
+// Run full system test and upload data to http://192.168.4.1/
+void Test_System()
+{
+  String sensorData;
+
+  sensorData = "S1: ";
+  sensorData += pS1->distance;
+  sensorData += " S2: ";
+  sensorData += pS2->distance;
+  sensorData += " S3: ";
+  sensorData += pS3->distance;
+  sensorData += " S4: ";
+  sensorData += pS4->distance;
+  sensorData += '\n';
+
+  sensorData += "LiDAR: ";
+  sensorData += pLidar->distance;
+  sensorData += '\n';
+  
+  sensorData += "Roll: ";
+  sensorData += pIMU->roll;
+  sensorData += " Pitch: ";
+  sensorData += pIMU->pitch;
+  sensorData += " Yaw: ";
+  sensorData += pIMU->yaw;
+  sensorData += '\n';
+
+  char data[512];
+  pNetworking->getUDPPacket(data, sizeof(data));
+  Serial.println("\nObject Data: ");
+  sensorData += data;
+
+  Serial.println("Running Wheels!");
+  pWheelL->startWheel(300, true);
+  pWheelR->startWheel(300, true);
+  delay(3000);
+  pWheelL->stopWheel();
+  pWheelR->stopWheel();
+
+  Serial.println("Running Haptics!");
+  pHapticL->startHaptic(3);
+  pHapticR->startHaptic(3);
+  delay(3000);
+  pHapticL->stopHaptic();
+  pHapticR->stopHaptic();
+
+  pNetworking->pushSerialData(sensorData);
+  pNetworking->update();
+}
+
