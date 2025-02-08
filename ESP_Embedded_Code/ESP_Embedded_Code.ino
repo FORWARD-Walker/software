@@ -74,8 +74,10 @@ Haptic* pHapticR = NULL;
 Wheel* pWheelL = NULL;
 Wheel* pWheelR = NULL;
 
+// Function Prototypes
 void Update_Data();
 void Test_System();
+void Send_Sensor_Data();
 
 // Setup Code
 void setup()
@@ -154,65 +156,26 @@ void setup()
 void loop()
 {
   Update_Data(); // Update Sensor data
-  Test_System(); // Test System
 
-  // // Null pointer check sonar sensors
-  // if(pS1 && pS2 && pS3 && pS4)
+  // // Example avoidance of object in front
+  // if(!pWheelL->spinning) pWheelL->startWheel(350, true);
+  // if(!pWheelR->spinning) pWheelR->startWheel(350, true);
+
+  // if (pS2->distance < 50 || pS3->distance < 50)
   // {
-  //   // Check if object is on the left
-  //   if(pS1->distance < 100)
-  //   {
-  //     Serial.println("Object within 1 meter on the left!");
-  //     Serial.print("S1: ");
-  //     Serial.println(pS1->distance);
-  //     s1FG = true;
-  //   }
-
-  //   // Check if object is on the front left
-  //   if(pS2->distance < 300)
-  //   {
-  //     Serial.println("Object within 3 meters in front Left!");
-  //     Serial.print("S2: ");
-  //     Serial.println(pS2->distance);
-  //     s2FG = true;
-  //   }
-
-  //   // Check if object is on the front right
-  //   if (pS3->distance < 300)
-  //   { 
-  //     Serial.println("Object within 3 meters in front right!");
-  //     Serial.print("S3: ");
-  //     Serial.println(pS3->distance);
-  //     s3FG = true;
-  //   }
-
-  //   // Check if an object is on the right
-  //   if(pS4->distance < 100)
-  //   {
-  //     Serial.println("Object within 1 meter on the right!");
-  //     Serial.print("S4: ");
-  //     Serial.println(pS4->distance);
-  //     s4FG = true;
-  //   }
-
-  //   // Classify Object
-  //   if (s1FG || s2FG || s3FG || s4FG)
-  //   {
-  //     // Check Camera data
-  //     int numObj = -1;
-  //     if(pNetworking && useCV)
-  //     {
-  //       char data[512];
-  //       pNetworking->getUDPPacket(data, sizeof(data));
-  //       Serial.println("\nObject Data: ");
-  //       Serial.println(data);
-
-  //       // Parse data to store
-  //       // Number of objects
-  //       // Each object data
-  //     }
-  //   }
+  //   pWheelL->startWheel(300, false);
+  //   pWheelR->startWheel(300, false);
+  //   pHapticL->startHaptic(3);
+  //   pHapticR->startHaptic(3);
+  //   delay(2000);
+  //   pWheelL->stopWheel();
+  //   pWheelR->stopWheel(); 
+  //   delay(5000);
+  //   pHapticL->stopHaptic();
+  //   pHapticR->stopHaptic();
   // }
+  
+  Send_Sensor_Data();
 
   delay(FRAME_LENGTH); // Delay
   digitalWrite(LED, digitalRead(LED) ^ 1);  // Heartbeat
@@ -243,8 +206,8 @@ void Update_Data()
     }
 }
 
-// Run full system test and upload data to http://192.168.4.1/
-void Test_System()
+// send Sensor data to website
+void Send_Sensor_Data()
 {
   String sensorData;
 
@@ -272,24 +235,28 @@ void Test_System()
 
   char data[512];
   pNetworking->getUDPPacket(data, sizeof(data));
-  Serial.println("\nObject Data: ");
   sensorData += data;
 
-  Serial.println("Running Wheels!");
-  pWheelL->startWheel(300, true);
-  pWheelR->startWheel(300, true);
-  delay(3000);
-  pWheelL->stopWheel();
-  pWheelR->stopWheel();
+  pNetworking->pushSerialData(sensorData);
+  pNetworking->update();
+}
 
+// Run full system test and upload data to http://192.168.4.1/
+void Test_System()
+{
+  Send_Sensor_Data();
+
+  Serial.println("Running Wheels!");
+  pWheelL->startWheel(500, true);
+  pWheelR->startWheel(500, true);
   Serial.println("Running Haptics!");
   pHapticL->startHaptic(3);
   pHapticR->startHaptic(3);
   delay(3000);
+  pWheelL->stopWheel();
+  pWheelR->stopWheel();
   pHapticL->stopHaptic();
   pHapticR->stopHaptic();
 
-  pNetworking->pushSerialData(sensorData);
-  pNetworking->update();
 }
 
