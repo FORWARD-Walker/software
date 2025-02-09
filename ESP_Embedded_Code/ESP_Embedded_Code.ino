@@ -156,6 +156,7 @@ void setup()
 void loop()
 {
   Update_Data(); // Update Sensor data
+  Send_Sensor_Data(); // Push to web
 
   // // Example avoidance of object in front
   // if(!pWheelL->spinning) pWheelL->startWheel(350, true);
@@ -170,13 +171,16 @@ void loop()
   //   delay(2000);
   //   pWheelL->stopWheel();
   //   pWheelR->stopWheel(); 
-  //   delay(5000);
+  //   delay(2000);
+  //   pWheelL->startWheel(300, true);
+  //   pWheelR->startWheel(300, false);
+  //   delay(8000);
   //   pHapticL->stopHaptic();
   //   pHapticR->stopHaptic();
+  //   pWheelL->stopWheel();
+  //   pWheelR->stopWheel();
   // }
   
-  Send_Sensor_Data();
-
   delay(FRAME_LENGTH); // Delay
   digitalWrite(LED, digitalRead(LED) ^ 1);  // Heartbeat
 }

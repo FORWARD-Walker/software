@@ -14,7 +14,6 @@ private:
     WiFiUDP udp; // UDP object
     WebServer server;
     String dataBuffer;
-    int dBuffCtr;
 
 public:
     Networking();                                   // Clas constructor

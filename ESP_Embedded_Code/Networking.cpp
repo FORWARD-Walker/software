@@ -7,7 +7,6 @@
 Networking::Networking() : server(80)
 {
     this->setup();
-    this->dBuffCtr = 0;
     this->dataBuffer = "";
 }
 
@@ -69,13 +68,7 @@ void Networking::handleRoot()
 // Push Serial data
 void Networking::pushSerialData(String data)
 {
-    this->dataBuffer += data + "\n"; // Append new data with a newline
-    this->dBuffCtr++; // Inc data buffer
-    if(dBuffCtr > 100)
-    {
-      this->dataBuffer = "";
-      this->dBuffCtr = 0;
-    }
+    this->dataBuffer = data + "\n" + this->dataBuffer; // Append new data with a newline
 }
 
 // Update server
