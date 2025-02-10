@@ -60,7 +60,7 @@ void Networking::handleRoot()
 {
     String html = "<html><head><title>ESP32 Data</title></head><body>";
     html += "<h1>Serial Data:</h1>";
-    html += "<pre>" + dataBuffer + "</pre>";
+    html += "<pre>" + this->dataBuffer + "</pre>";
     html += "</body></html>";
     server.send(200, "text/html", html);
 }
@@ -68,7 +68,7 @@ void Networking::handleRoot()
 // Push Serial data
 void Networking::pushSerialData(String data)
 {
-    this->dataBuffer = data + "\n" + this->dataBuffer; // Append new data with a newline
+    this->dataBuffer += data + "\n"; // Append new data with a newline
 }
 
 // Update server

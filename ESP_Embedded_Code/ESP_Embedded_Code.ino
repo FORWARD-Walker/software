@@ -43,13 +43,13 @@
 #define RWMPR 15 // Right Wheel motor pin 2
 
 // Boolean flags
-bool hostNetwork = true; // Set to host network
-bool useCV = true; // Set to use computer vision
-bool useSonar = true; // Set to use sonar functions
-bool useLiDAR = true; // Set to use LiDAR functions
-bool useImu = true; // Set to use IMU
-bool useHaptics = true; // Set to use Haptics
-bool useWheels = true; // Set to use Wheels
+bool hostNetwork = false; // Set to host network
+bool useCV = false; // Set to use computer vision
+bool useSonar = false; // Set to use sonar functions
+bool useLiDAR = false; // Set to use LiDAR functions
+bool useImu = false; // Set to use IMU
+bool useHaptics = false; // Set to use Haptics
+bool useWheels = false; // Set to use Wheels
 
 // Network Object
 Networking* pNetworking = NULL;
@@ -158,28 +158,20 @@ void loop()
   Update_Data(); // Update Sensor data
   Send_Sensor_Data(); // Push to web
 
-  // // Example avoidance of object in front
-  // if(!pWheelL->spinning) pWheelL->startWheel(350, true);
-  // if(!pWheelR->spinning) pWheelR->startWheel(350, true);
+  //    Main code     //
+  //                  //
+  //                  //
+  //                  //
+  //                  //
+  //                  //
+  //                  //
+  //                  //
+  //                  //
+  //                  //
+  //                  //
+  //                  //
+  //    Goes here     //
 
-  // if (pS2->distance < 50 || pS3->distance < 50)
-  // {
-  //   pWheelL->startWheel(300, false);
-  //   pWheelR->startWheel(300, false);
-  //   pHapticL->startHaptic(3);
-  //   pHapticR->startHaptic(3);
-  //   delay(2000);
-  //   pWheelL->stopWheel();
-  //   pWheelR->stopWheel(); 
-  //   delay(2000);
-  //   pWheelL->startWheel(300, true);
-  //   pWheelR->startWheel(300, false);
-  //   delay(8000);
-  //   pHapticL->stopHaptic();
-  //   pHapticR->stopHaptic();
-  //   pWheelL->stopWheel();
-  //   pWheelR->stopWheel();
-  // }
   
   delay(FRAME_LENGTH); // Delay
   digitalWrite(LED, digitalRead(LED) ^ 1);  // Heartbeat
