@@ -46,6 +46,9 @@ bool useHaptics = true; // Set to use Haptics
 // Network Object
 Networking* pNetworking;
 
+// Utils
+utils* utils;
+
 // Sensor Objects
 Sonar* pS1;
 Sonar* pS2;
