@@ -37,11 +37,7 @@ long Sonar::readSonarDuration()
 }
 
 // Print to serial the current pinouts
-void Sonar::printPins()
+String Sonar::printPins()
 {
-    Serial.print("Trigger Pin: ");
-    Serial.print(this->trigPin);
-    Serial.print(" Echo Pin: ");
-    Serial.print(this->echoPin);
-    Serial.println();
+  return String("Trigger Pin: ") + this->trigPin + String(" Echo Pin: ") + this->echoPin + "\n";
 }
