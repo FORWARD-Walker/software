@@ -1,7 +1,7 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-# include <Arduino.h>
+
 
 // utils class
 class utils
@@ -9,7 +9,8 @@ class utils
     public:
         utils(); // constructor
         void setup();
-        void calculateLOS()
+        void calculateLOS();
         void calculateArea();
         void estimateDepth();
 }
+#endif

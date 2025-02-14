@@ -1,0 +1,14 @@
+pseudocode for 2D halfwidth LOS algorithm
+
+1. determine whether obstacle is left or right of [1,0,0] in camera reference frame.
+    (use S2,L1 or S3,L1, or just S2 or S3) to provide range for stereographic projection.
+
+2. multiply pixel2los() unit vector by sensor range. take rLOSy component
+
+3. compare to half width of platform.
+    if (rLOSy + obstacle_halfwidth) > platform_halfwidth, obstacle is not in the forward safe path
+
+4. guess that the halfwidth of a person is 200mm.
+    guess that the halfwidth of a car is 1000mm
+
+5. 
