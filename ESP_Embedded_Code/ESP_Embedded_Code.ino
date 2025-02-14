@@ -140,21 +140,21 @@ void setup()
     pNetworking->pushSerialData(pS3->printPins());
     pS4 = new Sonar(TRIG4, ECHO4);
     pNetworking->pushSerialData(pS4->printPins());
-    Serial.println("Sonar Initialized!\n"); // Print confirmation
+    pNetworking->pushSerialData("Sonar Initialized!\n"); // Print confirmation
   }
 
   // Initizalize the LiDAR object
   if(useLidar)
   {
     pLidar = new Lidar();  // Init object
-    Serial.println("LiDAR Initialized!\n");
+    pNetworking->pushSerialData("LiDAR Initialized!\n");
   }
 
   // Intialize IMU object
   if(useImu)
   {
     pIMU = new Imu(); // Init object
-    Serial.println("IMU Initialized!\n"); // Print confirmation
+    pNetworking->pushSerialData("IMU Initialized!\n"); // Print confirmation
   }
 
   // Initialize Haptics Objects
@@ -164,7 +164,7 @@ void setup()
     pNetworking->pushSerialData(pHapticL->printPins());
     pHapticR = new Haptic(RHMP1, RHMP2, RHME);  // Init object
     pNetworking->pushSerialData(pHapticR->printPins());
-    Serial.println("Haptics Initialized!\n"); // Print confirmation
+    pNetworking->pushSerialData("Haptics Initialized!\n"); // Print confirmation
   }
 
   // Initialize Wheel Objects
@@ -174,7 +174,7 @@ void setup()
     pNetworking->pushSerialData(pWheelL->printPins());
     pWheelR = new Wheel(RWMPF, RWMPR);  // Init object
     pNetworking->pushSerialData(pWheelR->printPins());
-    Serial.println("Wheels Initialized!\n"); // Print confirmation
+    pNetworking->pushSerialData("Wheels Initialized!\n"); // Print confirmation
   }
 }
 
@@ -188,6 +188,8 @@ void loop()
 void Timer_1Hz_ISR()
 {
     digitalWrite(LED, digitalRead(LED) ^ 1);  // Heartbeat
+    Update_Data(); // Update Sensor Data
+    Send_Sensor_Data(); // Push Serial Data
 }
 
 // Every 100 msec (10 FPS)
