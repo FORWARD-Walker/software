@@ -16,7 +16,7 @@ public:
     void setup();                    // Setup function
     void readDistance();             // Get reading function
     long distance;                   // distance in cm
-    void printPins();                // Print to serial the current pinouts
+    String printPins();                // Print to serial the current pinouts
 };
 
 #endif
