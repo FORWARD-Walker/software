@@ -84,26 +84,22 @@ void Test_System();
 void Send_Sensor_Data();
 
 // ISR prototypes
-void Timer_1Hz_ISR();
-void Timer_10Hz_ISR();
-void Timer_30Hz_ISR();
-void Sonar_ISR();
+static void IRAM_ATTR Timer_1Hz_ISR();
+static void IRAM_ATTR Timer_10Hz_ISR();
+static void IRAM_ATTR Timer_30Hz_ISR();
 
 // Setup Code
 void setup()
 {
   // Set up serial
   Serial.begin(115200); // Init Serial
-  Serial.println("\nSerial Initialized!\n");  // Print confirmation
 
   // Set up I2C
   Wire.begin();
-  Serial.println("I2C Initialized!\n"); // Print confirmation
 
   // Setup heartbeat
   pinMode(LED, OUTPUT); // Set up LED as output
   digitalWrite(LED, HIGH); // Init to high
-  Serial.println("Heartbeat Initialized!\n"); // Print confirmation
 
   // Setup Timers and Interrupts
   // Timer 1 Hz
@@ -133,13 +129,13 @@ void setup()
   {
     // Initizalize the Sonar objects
     pS1 = new Sonar(TRIG1, ECHO1);
-    pNetworking->pushSerialData(pS1->printPins());
+    pNetworking->pushSerialData("S1: " + pS1->printPins());
     pS2 = new Sonar(TRIG2, ECHO2);
-    pNetworking->pushSerialData(pS2->printPins());
+    pNetworking->pushSerialData("S2: " + pS2->printPins());
     pS3 = new Sonar(TRIG3, ECHO3);
-    pNetworking->pushSerialData(pS3->printPins());
+    pNetworking->pushSerialData("S3: " + pS3->printPins());
     pS4 = new Sonar(TRIG4, ECHO4);
-    pNetworking->pushSerialData(pS4->printPins());
+    pNetworking->pushSerialData("S4: " + pS4->printPins());
     pNetworking->pushSerialData("Sonar Initialized!\n"); // Print confirmation
   }
 
@@ -161,9 +157,9 @@ void setup()
   if(useHaptics)
   {
     pHapticL = new Haptic(LHMP1, LHMP2, LHME);  // Init object
-    pNetworking->pushSerialData(pHapticL->printPins());
+    pNetworking->pushSerialData("Left Haptic: " + pHapticL->printPins());
     pHapticR = new Haptic(RHMP1, RHMP2, RHME);  // Init object
-    pNetworking->pushSerialData(pHapticR->printPins());
+    pNetworking->pushSerialData("Right Haptic: " + pHapticR->printPins());
     pNetworking->pushSerialData("Haptics Initialized!\n"); // Print confirmation
   }
 
@@ -171,40 +167,61 @@ void setup()
   if(useWheels)
   {
     pWheelL = new Wheel(LWMPF, LWMPR);  // Init object
-    pNetworking->pushSerialData(pWheelL->printPins());
+    pNetworking->pushSerialData("Left Wheek: " + pWheelL->printPins());
     pWheelR = new Wheel(RWMPF, RWMPR);  // Init object
-    pNetworking->pushSerialData(pWheelR->printPins());
+    pNetworking->pushSerialData("Right Wheel: " + pWheelR->printPins());
     pNetworking->pushSerialData("Wheels Initialized!\n"); // Print confirmation
   }
 }
 
+// Boolean Processing Flags
+bool Timer_1HZ_FG = false;
+bool Timer_10HZ_FG = false;
+bool Timer_30HZ_FG = false;
+
 // Main loop
 void loop()
-{
+{    
+  // 1 HZ ISR
+  if(Timer_1HZ_FG)
+  {
+    digitalWrite(LED, digitalRead(LED) ^ 1);  // Heartbeat
+    Update_Data(); // Update Sensor Data
+    Send_Sensor_Data(); // Push Serial Data
+    Timer_1HZ_FG = false;
+  }
+
+  // 10 HZ ISR
+  if(Timer_10HZ_FG)
+  {
+    Timer_10HZ_FG = false;
+  }  
+  
+  // 30 HZ ISR
+  if(Timer_30HZ_FG)
+  {
+    Timer_30HZ_FG = false;
+  }
+
 }
 
 // ISR's
 // Every 1 second (1 FPS)
-void Timer_1Hz_ISR()
+static void IRAM_ATTR Timer_1Hz_ISR()
 {
-    digitalWrite(LED, digitalRead(LED) ^ 1);  // Heartbeat
-    Update_Data(); // Update Sensor Data
-    Send_Sensor_Data(); // Push Serial Data
+  Timer_1HZ_FG = true;
 }
 
 // Every 100 msec (10 FPS)
-void Timer_10Hz_ISR()
+static void IRAM_ATTR Timer_10Hz_ISR()
 {
+  Timer_10HZ_FG = true;
 }
 
 // Ever 33 msec (30 FPS)
-void Timer_30Hz_ISR()
+static void IRAM_ATTR Timer_30Hz_ISR()
 {
-}
-
-void Sonar_ISR()
-{
-    Serial.println("Sonar");
+    Timer_30HZ_FG = true;
 }
 
 // Update Sensor Data
@@ -258,23 +275,25 @@ void Send_Sensor_Data()
   }
 
   if(useImu)
-  sensorData += "Roll: ";
-  sensorData += pIMU->roll;
-  sensorData += " Pitch: ";
-  sensorData += pIMU->pitch;
-  sensorData += " Yaw: ";
-  sensorData += pIMU->yaw;
-  sensorData += '\n';
+  {
+    sensorData += "Roll: ";
+    sensorData += pIMU->roll;
+    sensorData += " Pitch: ";
+    sensorData += pIMU->pitch;
+    sensorData += " Yaw: ";
+    sensorData += pIMU->yaw;
+    sensorData += '\n';
+  }
 
   if(useCV)
   {
     char data[512];
     pNetworking->getUDPPacket(data, sizeof(data));
     sensorData += data;
-
-    pNetworking->pushSerialData(sensorData);
-    pNetworking->update();
   }
+
+  pNetworking->pushSerialData(sensorData);
+  pNetworking->update();
 }
 
 // Run full system test and upload data to http://192.168.4.1/
