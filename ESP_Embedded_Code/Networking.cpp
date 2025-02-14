@@ -19,13 +19,8 @@ void Networking::setup()
     // Initialize access point
     WiFi.softAP(ssid, password);
 
-    // Print AP details
-    Serial.println("Access Point Initialized!");
-    Serial.printf("AP IP Address: %s\n", WiFi.softAPIP().toString().c_str());
-
     // Start the UDP server
     udp.begin(PORT);
-    Serial.printf("UDP Server listening on port %d\n", PORT);
 
     // Set up the HTTP server route(s)
     server.on("/", HTTP_GET, std::bind(&Networking::handleRoot, this));
