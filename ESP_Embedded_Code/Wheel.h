@@ -15,7 +15,7 @@ public:
     void setup();                             // Setup function
     void startWheel(int speed, bool forward); // Start the haptic motor
     void stopWheel();                         // Stop the haptic motor
-    void printPins();                         // Print pin out
+    String printPins();                         // Print pin out
 
     // State Variables
     bool spinning;

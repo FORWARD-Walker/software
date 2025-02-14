@@ -47,11 +47,7 @@ void Wheel::stopWheel()
 }
 
 // Print to serial the current pinouts
-void Wheel::printPins()
+String Wheel::printPins()
 {
-    Serial.print("Wheel Pin Forward: ");
-    Serial.print(this->motorPinForward);
-    Serial.print("Wheel Pin Reverse: ");
-    Serial.print(this->motorPinReverse);
-    Serial.println();
+    return String("Wheel Pin Forward: ") + this->motorPinForward + String("Wheel Pin Reverse: ") + this->motorPinReverse + "\n";
 }

@@ -15,8 +15,7 @@
 #include "Wheel.h"
 
 // # Defines
-#define LED 2 // For LED Heartbeat
-#define FRAME_LENGTH 33 // (msec) [1000 = 1 Hz, 500 = 2 Hz, 250 = 4 Hz, 100 = 10 Hz, 33 = 30 Hz]
+#define LED 2
 
 // Sonar Pins
 #define TRIG1 32 // Trigger pin for sensor 1
@@ -46,7 +45,7 @@
 bool hostNetwork = false; // Set to host network
 bool useCV = false; // Set to use computer vision
 bool useSonar = false; // Set to use sonar functions
-bool useLiDAR = false; // Set to use LiDAR functions
+bool useLidar = false; // Set to use LiDAR functions
 bool useImu = false; // Set to use IMU
 bool useHaptics = false; // Set to use Haptics
 bool useWheels = false; // Set to use Wheels
@@ -74,10 +73,21 @@ Haptic* pHapticR = NULL;
 Wheel* pWheelL = NULL;
 Wheel* pWheelR = NULL;
 
-// Function Prototypes
+// Timer Objects
+hw_timer_t *Timer_1Hz = NULL;
+hw_timer_t *Timer_10Hz = NULL;
+hw_timer_t *Timer_30Hz = NULL;
+
+// Helper Function Prototypes
 void Update_Data();
 void Test_System();
 void Send_Sensor_Data();
+
+// ISR prototypes
+void Timer_1Hz_ISR();
+void Timer_10Hz_ISR();
+void Timer_30Hz_ISR();
+void Sonar_ISR();
 
 // Setup Code
 void setup()
@@ -95,11 +105,27 @@ void setup()
   digitalWrite(LED, HIGH); // Init to high
   Serial.println("Heartbeat Initialized!\n"); // Print confirmation
 
+  // Setup Timers and Interrupts
+  // Timer 1 Hz
+  Timer_1Hz = timerBegin(1000000);
+  timerAttachInterrupt(Timer_1Hz, &Timer_1Hz_ISR);
+  timerAlarm(Timer_1Hz, 1000000, true, 0);
+
+  // Timer 10 Hz
+  Timer_10Hz = timerBegin(10000000);
+  timerAttachInterrupt(Timer_10Hz, &Timer_10Hz_ISR);
+  timerAlarm(Timer_10Hz, 1000000, true, 0);  
+  
+  // Timer 30 Hz
+  Timer_30Hz = timerBegin(30000000);
+  timerAttachInterrupt(Timer_30Hz, &Timer_30Hz_ISR);
+  timerAlarm(Timer_30Hz, 1000000, true, 0);
+
   // Setup if ESP32 is hosting a network
   if(hostNetwork)
   {
     pNetworking = new Networking();  // Init object
-    Serial.println("Network Initialized!\n");
+    pNetworking->pushSerialData("Network Initialized!\n");
   }
 
   // Setup Sonar sensors if connected
@@ -107,18 +133,18 @@ void setup()
   {
     // Initizalize the Sonar objects
     pS1 = new Sonar(TRIG1, ECHO1);
-    pS1->printPins();
+    pNetworking->pushSerialData(pS1->printPins());
     pS2 = new Sonar(TRIG2, ECHO2);
-    pS2->printPins();
+    pNetworking->pushSerialData(pS2->printPins());
     pS3 = new Sonar(TRIG3, ECHO3);
-    pS3->printPins();
+    pNetworking->pushSerialData(pS3->printPins());
     pS4 = new Sonar(TRIG4, ECHO4);
-    pS4->printPins();
+    pNetworking->pushSerialData(pS4->printPins());
     Serial.println("Sonar Initialized!\n"); // Print confirmation
   }
 
   // Initizalize the LiDAR object
-  if(useLiDAR)
+  if(useLidar)
   {
     pLidar = new Lidar();  // Init object
     Serial.println("LiDAR Initialized!\n");
@@ -135,9 +161,9 @@ void setup()
   if(useHaptics)
   {
     pHapticL = new Haptic(LHMP1, LHMP2, LHME);  // Init object
-    pHapticL->printPins();
+    pNetworking->pushSerialData(pHapticL->printPins());
     pHapticR = new Haptic(RHMP1, RHMP2, RHME);  // Init object
-    pHapticR->printPins();
+    pNetworking->pushSerialData(pHapticR->printPins());
     Serial.println("Haptics Initialized!\n"); // Print confirmation
   }
 
@@ -145,9 +171,9 @@ void setup()
   if(useWheels)
   {
     pWheelL = new Wheel(LWMPF, LWMPR);  // Init object
-    pWheelL->printPins();
+    pNetworking->pushSerialData(pWheelL->printPins());
     pWheelR = new Wheel(RWMPF, RWMPR);  // Init object
-    pWheelR->printPins();
+    pNetworking->pushSerialData(pWheelR->printPins());
     Serial.println("Wheels Initialized!\n"); // Print confirmation
   }
 }
@@ -155,33 +181,35 @@ void setup()
 // Main loop
 void loop()
 {
-  Update_Data(); // Update Sensor data
-  Send_Sensor_Data(); // Push to web
+}
 
-  //    Main code     //
-  //                  //
-  //                  //
-  //                  //
-  //                  //
-  //                  //
-  //                  //
-  //                  //
-  //                  //
-  //                  //
-  //                  //
-  //                  //
-  //    Goes here     //
+// ISR's
+// Every 1 second (1 FPS)
+void Timer_1Hz_ISR()
+{
+    digitalWrite(LED, digitalRead(LED) ^ 1);  // Heartbeat
+}
 
-  
-  delay(FRAME_LENGTH); // Delay
-  digitalWrite(LED, digitalRead(LED) ^ 1);  // Heartbeat
+// Every 100 msec (10 FPS)
+void Timer_10Hz_ISR()
+{
+}
+
+// Ever 33 msec (30 FPS)
+void Timer_30Hz_ISR()
+{
+}
+
+void Sonar_ISR()
+{
+    Serial.println("Sonar");
 }
 
 // Update Sensor Data
 void Update_Data()
 {
     // Update Sonar Distances
-    if (pS1 && pS2 && pS3 && pS4)
+    if (useSonar)
     {
         pS1->readDistance();
         pS2->readDistance();
@@ -190,13 +218,13 @@ void Update_Data()
     }
 
     // Update LiDAR Distances
-    if (pLidar)
+    if (useLidar)
     {
         pLidar->readDistance();
     }
 
     // Update IMU readings
-    if (pIMU)
+    if (useImu)
     {
         pIMU->updateData();
     }
@@ -207,20 +235,27 @@ void Send_Sensor_Data()
 {
   String sensorData;
 
-  sensorData = "S1: ";
-  sensorData += pS1->distance;
-  sensorData += " S2: ";
-  sensorData += pS2->distance;
-  sensorData += " S3: ";
-  sensorData += pS3->distance;
-  sensorData += " S4: ";
-  sensorData += pS4->distance;
-  sensorData += '\n';
+  if(useSonar)
+  {
+    sensorData = "S1: ";
+    sensorData += pS1->distance;
+    sensorData += " S2: ";
+    sensorData += pS2->distance;
+    sensorData += " S3: ";
+    sensorData += pS3->distance;
+    sensorData += " S4: ";
+    sensorData += pS4->distance;
+    sensorData += '\n';
+  }
 
-  sensorData += "LiDAR: ";
-  sensorData += pLidar->distance;
-  sensorData += '\n';
-  
+  if(useLidar)
+  {
+    sensorData += "LiDAR: ";
+    sensorData += pLidar->distance;
+    sensorData += '\n';
+  }
+
+  if(useImu)
   sensorData += "Roll: ";
   sensorData += pIMU->roll;
   sensorData += " Pitch: ";
@@ -229,30 +264,63 @@ void Send_Sensor_Data()
   sensorData += pIMU->yaw;
   sensorData += '\n';
 
-  char data[512];
-  pNetworking->getUDPPacket(data, sizeof(data));
-  sensorData += data;
+  if(useCV)
+  {
+    char data[512];
+    pNetworking->getUDPPacket(data, sizeof(data));
+    sensorData += data;
 
-  pNetworking->pushSerialData(sensorData);
-  pNetworking->update();
+    pNetworking->pushSerialData(sensorData);
+    pNetworking->update();
+  }
 }
 
 // Run full system test and upload data to http://192.168.4.1/
 void Test_System()
 {
-  Send_Sensor_Data();
+  if(useCV && useHaptics && useImu && useLidar && useSonar && useWheels)
+  {
+    Send_Sensor_Data();
+    Serial.println("Running Wheels!");
+    pWheelL->startWheel(500, true);
+    pWheelR->startWheel(500, true);
+    Serial.println("Running Haptics!");
+    pHapticL->startHaptic(3);
+    pHapticR->startHaptic(3);
+    delay(3000);
+    pWheelL->stopWheel();
+    pWheelR->stopWheel();
+    pHapticL->stopHaptic();
+    pHapticR->stopHaptic();
+  }
+}
 
-  Serial.println("Running Wheels!");
-  pWheelL->startWheel(500, true);
-  pWheelR->startWheel(500, true);
-  Serial.println("Running Haptics!");
-  pHapticL->startHaptic(3);
-  pHapticR->startHaptic(3);
-  delay(3000);
-  pWheelL->stopWheel();
-  pWheelR->stopWheel();
-  pHapticL->stopHaptic();
-  pHapticR->stopHaptic();
+void Sample_GNC_Alg()
+{
+  if(useCV && useHaptics && useImu && useLidar && useSonar && useWheels)
+  {
+    // Example avoidance of object in front
+    if(!pWheelL->spinning) pWheelL->startWheel(350, true);
+    if(!pWheelR->spinning) pWheelR->startWheel(350, true);
 
+    if (pS2->distance < 50 || pS3->distance < 50)
+    {
+      pWheelL->startWheel(350, false);
+      pWheelR->startWheel(350, false);
+      pHapticL->startHaptic(3);
+      pHapticR->startHaptic(3);
+      delay(1000);
+      pWheelL->stopWheel();
+      pWheelR->stopWheel(); 
+      delay(2000);
+      pWheelL->startWheel(350, true);
+      pWheelR->startWheel(350, false);
+      delay(8000);
+      pHapticL->stopHaptic();
+      pHapticR->stopHaptic();
+      pWheelL->stopWheel();
+      pWheelR->stopWheel();
+    }
+  }
 }
 

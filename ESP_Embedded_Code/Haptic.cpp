@@ -63,13 +63,7 @@ void Haptic::stopHaptic()
 }
 
 // Print to serial the current pinouts
-void Haptic::printPins()
+String Haptic::printPins()
 {
-    Serial.print("Motor Pin 1: ");
-    Serial.print(this->motorPin1);
-    Serial.print(" Motor Pin 2: ");
-    Serial.print(this->motorPin2);
-    Serial.print(" Enable Pin: ");
-    Serial.print(this->enPin);
-    Serial.println();
+    return String("Motor Pin 1: ") + this->motorPin1 + String(" Motor Pin 2: ") + this->motorPin2 + String(" Enable Pin: ") + this->enPin + "\n"; 
 }
