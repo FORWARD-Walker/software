@@ -20,7 +20,7 @@ ObjectDetectionItem itemList[80] = {
 {6,  "train",           1},
 {7,  "truck",           1},
 {8,  "boat",            1},
-{9,  "traffic light",   0},
+{9,  "traffic light",   1},
 {10, "fire hydrant",    1},
 {11, "stop sign",       0},
 {12, "parking meter",   0},
