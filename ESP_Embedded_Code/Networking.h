@@ -1,9 +1,9 @@
 #ifndef Networking_H
 #define Networking_H
 
-#include <WiFiUdp.h>
 #include <Arduino.h>
 #include <WebServer.h>
+#include "WiFiServer.h"
 #include <WiFi.h>
 #include <HTTPClient.h>
 
@@ -11,18 +11,18 @@
 class Networking
 {
 private:
-    WiFiUDP udp; // UDP object
-    WebServer server;
+    WiFiClient client; // TCP Client
+    WiFiServer wifiServer; // TCP Server
+    WebServer webServer; // HTTP server
     String dataBuffer;
 
 public:
     Networking();                                   // Clas constructor
     void setup();                                   // Setup function
-    void getUDPPacket(char *data, size_t dataSize); // Read UDP
+    void getTCPStream(char* data, size_t dataSize); // Read TCP
     void pushSerialData(String data);
     void handleRoot();
     void update();
-
 };
 
 #endif

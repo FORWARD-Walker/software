@@ -1,10 +1,12 @@
 #include "Networking.h"
 
-#define IP_ADDR "192.168.4.2"
-#define PORT 12345
+#define CAM_IP_ADDR "192.168.4.2"
+#define TCP_PORT 12346
+#define WEB_PORT 80
+
 
 // Create object
-Networking::Networking() : server(80)
+Networking::Networking() : webServer(WEB_PORT), wifiServer(TCP_PORT)
 {
     this->setup();
     this->dataBuffer = "";
@@ -18,35 +20,28 @@ void Networking::setup()
 
     // Initialize access point
     WiFi.softAP(ssid, password);
-
-    // Start the UDP server
-    udp.begin(PORT);
+    wifiServer.begin();
 
     // Set up the HTTP server route(s)
-    server.on("/", HTTP_GET, std::bind(&Networking::handleRoot, this));
-    server.begin();
+    webServer.on("/", HTTP_GET, std::bind(&Networking::handleRoot, this));
+    webServer.begin();
 }
 
-// Simplified function to read Networking distance over I2C
-void Networking::getUDPPacket(char *data, size_t dataSize)
+// Get TCP Data
+void Networking::getTCPStream(char* data, size_t dataSize)
 {
-    // Assert bit to signal receive a packet
-    udp.beginPacket(IP_ADDR, PORT);
-    uint8_t rxFG = 1;
-    udp.write(rxFG);
-    udp.endPacket();
-
-    // Wait for the packet
-    delay(3);
-    int packetSize = udp.parsePacket();
-    if (packetSize > 0)
+    client = wifiServer.available();
+    if (client)
     {
-        int len = udp.read(data, dataSize - 1);
-        if (len > 0)
+        while (client.connected())
         {
-            data[len] = '\0';
-            return; // Exit on successful read
+            if (client.available())
+            {
+                String receivedData = client.readStringUntil('\0');
+                receivedData.toCharArray(data, dataSize);
+            }
         }
+        client.stop();
     }
 }
 
@@ -57,19 +52,17 @@ void Networking::handleRoot()
     html += "<h1>Serial Data:</h1>";
     html += "<pre>" + this->dataBuffer + "</pre>";
     html += "</body></html>";
-    server.send(200, "text/html", html);
+    webServer.send(200, "text/html", html);
 }
 
 // Push Serial data
 void Networking::pushSerialData(String data)
 {
-    this->dataBuffer += data + "\n"; // Append new data with a newline
+    this->dataBuffer = data + "\n" + this->dataBuffer; // Append new data with a newline
 }
 
 // Update server
 void Networking::update()
 {
-    server.handleClient();
+    webServer.handleClient();
 }
-
-

@@ -38,12 +38,12 @@
 // Wheel Pins
 #define LWMPF 4 // Left Wheel motor pin 1
 #define LWMPR 0 // Left Wheel motor pin 2
-#define RWMPF 2 // Right Wheel motor pin 1
+#define RWMPF 13 // Right Wheel motor pin 1
 #define RWMPR 15 // Right Wheel motor pin 2
 
 // Boolean flags
-bool hostNetwork = false; // Set to host network
-bool useCV = false; // Set to use computer vision
+bool hostNetwork = true; // Set to host network
+bool useCV = true; // Set to use computer vision
 bool useSonar = false; // Set to use sonar functions
 bool useLidar = false; // Set to use LiDAR functions
 bool useImu = false; // Set to use IMU
@@ -168,8 +168,10 @@ void setup()
   {
     pWheelL = new Wheel(LWMPF, LWMPR);  // Init object
     pNetworking->pushSerialData("Left Wheek: " + pWheelL->printPins());
+    pWheelL->stopWheel();
     pWheelR = new Wheel(RWMPF, RWMPR);  // Init object
-    pNetworking->pushSerialData("Right Wheel: " + pWheelR->printPins());
+    pNetworking->pushSerialData(" Right Wheel: " + pWheelR->printPins());
+    pWheelR->stopWheel();
     pNetworking->pushSerialData("Wheels Initialized!\n"); // Print confirmation
   }
 }
@@ -186,20 +188,26 @@ void loop()
   if(Timer_1HZ_FG)
   {
     digitalWrite(LED, digitalRead(LED) ^ 1);  // Heartbeat
-    Update_Data(); // Update Sensor Data
-    Send_Sensor_Data(); // Push Serial Data
+
+    // Reset ISR
     Timer_1HZ_FG = false;
   }
 
   // 10 HZ ISR
   if(Timer_10HZ_FG)
   {
+
+    // Reset ISR
     Timer_10HZ_FG = false;
   }  
   
   // 30 HZ ISR
   if(Timer_30HZ_FG)
   {
+    Update_Data(); // Update Sensor Data
+    Send_Sensor_Data(); // Push Serial Data 
+
+    // Reset ISR
     Timer_30HZ_FG = false;
   }
 
@@ -249,14 +257,14 @@ void Update_Data()
     }
 }
 
-// send Sensor data to website
+// send Sensor data to website (http://192.168.4.1)
 void Send_Sensor_Data()
 {
-  String sensorData;
+  String sensorData = "";
 
   if(useSonar)
   {
-    sensorData = "S1: ";
+    sensorData += "S1: ";
     sensorData += pS1->distance;
     sensorData += " S2: ";
     sensorData += pS2->distance;
@@ -287,8 +295,8 @@ void Send_Sensor_Data()
 
   if(useCV)
   {
-    char data[512];
-    pNetworking->getUDPPacket(data, sizeof(data));
+    char data[1024];
+    pNetworking->getTCPStream(data, 1024);
     sensorData += data;
   }
 
@@ -296,7 +304,7 @@ void Send_Sensor_Data()
   pNetworking->update();
 }
 
-// Run full system test and upload data to http://192.168.4.1/
+// Run full system test
 void Test_System()
 {
   if(useCV && useHaptics && useImu && useLidar && useSonar && useWheels)
