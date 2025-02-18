@@ -4,6 +4,7 @@
 #include "VideoStream.h"
 #include "NNObjectDetection.h"
 #include "ObjectClassList.h"
+#include "WiFiUdp.h"
 
 // # Defines
 #define CHANNEL 0
@@ -20,11 +21,8 @@ StreamIO videoStreamerNN(1, 1);
 
 char ssid[] = "FORWARD_Network";   // your network SSID (name)
 char pass[] = "Forward?0525";       // your network password
-
-// TCP set up
-WiFiClient client;
-const char* host_IP = "192.168.4.1";
-const uint16_t tcp_port = 12346;
+WiFiUDP udp; // Websocket object
+const int localPort = 12345; // Port to listen too
 
 // Set up code
 void setup() {
@@ -44,6 +42,11 @@ void setup() {
     Serial.println("Connected to the AP");
     Serial.print("Client IP Address: ");
     Serial.println(WiFi.localIP());
+
+    // UDP client setup
+    udp.begin(localPort);
+    Serial.print("UDP server started at port: ");
+    Serial.println(localPort);
 
     // Configure camera video channels with video format information
     config.setBitrate(2 * 1024 * 1024);     // Recommend to use 2Mbps for RTSP streaming to prevent network congestion
@@ -72,6 +75,10 @@ void setup() {
 }
 
 void loop() {
+
+  // Wait for flag to be asserted (1 byte)
+  uint8_t txFG = 0;
+  while(txFG != 1){ udp.read(&txFG, 1); }
   
   // Get results
   std::vector<ObjectDetectionResult> results = ObjDet.getResult();
@@ -106,17 +113,13 @@ void loop() {
 
   // Send results packet
   strcat(resultStr, "\n");
-  writeMsgTCP(resultStr);
+  writeMsg(resultStr);
 }
 
 /////////////// Functions ///////////////
-// TCP transmit
-void writeMsgTCP(char* msg)
+void writeMsg(char* msg)
 {
-  client.connect(host_IP, tcp_port);
-  Serial.println("Connected to server.");
-
-  // Send data to the server
-  client.println(msg);
-  client.stop();
+  udp.beginPacket("192.168.4.1", localPort); // IP of destination device
+  udp.write((const char*)msg);
+  udp.endPacket();
 }

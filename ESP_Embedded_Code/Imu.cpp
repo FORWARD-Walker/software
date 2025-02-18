@@ -20,9 +20,6 @@ void Imu::setup()
     if (!bno.begin())
     {
         Serial.println("Failed to initialize BNO055! Check connections.");
-        while (1)
-        {
-        }
     }
     bno.setExtCrystalUse(true);
 }

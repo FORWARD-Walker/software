@@ -1,12 +1,10 @@
 #include "Networking.h"
 
-#define CAM_IP_ADDR "192.168.4.2"
-#define TCP_PORT 12346
-#define WEB_PORT 80
-
+#define IP_ADDR "192.168.4.2"
+#define PORT 12345
 
 // Create object
-Networking::Networking() : webServer(WEB_PORT), wifiServer(TCP_PORT)
+Networking::Networking() : server(80)
 {
     this->setup();
     this->dataBuffer = "";
@@ -20,28 +18,36 @@ void Networking::setup()
 
     // Initialize access point
     WiFi.softAP(ssid, password);
-    wifiServer.begin();
+
+    // Start the UDP server
+    udp.begin(PORT);
 
     // Set up the HTTP server route(s)
-    webServer.on("/", HTTP_GET, std::bind(&Networking::handleRoot, this));
-    webServer.begin();
+    server.on("/", HTTP_GET, std::bind(&Networking::handleRoot, this));
+    server.begin();
 }
 
-// Get TCP Data
-void Networking::getTCPStream(char* data, size_t dataSize)
+// Get UDP Packet
+void Networking::getUDPPacket(char *data, size_t dataSize)
 {
-    client = wifiServer.available();
-    if (client)
+    // Assert bit to signal receive a packet
+    udp.beginPacket(IP_ADDR, PORT);
+    uint8_t rxFG = 1;
+    udp.write(rxFG);
+    udp.endPacket();
+
+    // Wait for the packet
+    delay(3);
+    int packetSize = udp.parsePacket();
+    if (packetSize > 0)
     {
-        while (client.connected())
+        int len = udp.read(data, dataSize - 1);
+        if (len > 0)
         {
-            if (client.available())
-            {
-                String receivedData = client.readStringUntil('\0');
-                receivedData.toCharArray(data, dataSize);
-            }
+            data[len] = '\0';
+            Serial.println(data);
+            return; // Exit on successful read
         }
-        client.stop();
     }
 }
 
@@ -52,7 +58,7 @@ void Networking::handleRoot()
     html += "<h1>Serial Data:</h1>";
     html += "<pre>" + this->dataBuffer + "</pre>";
     html += "</body></html>";
-    webServer.send(200, "text/html", html);
+    server.send(200, "text/html", html);
 }
 
 // Push Serial data
@@ -64,5 +70,5 @@ void Networking::pushSerialData(String data)
 // Update server
 void Networking::update()
 {
-    webServer.handleClient();
+    server.handleClient();
 }

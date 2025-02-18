@@ -1,12 +1,12 @@
 // EEL 4914 Senior Design MCU Code
 // Developers: Tobiah Bower, Morgan Snyder, Matthew Morello
 // The Code serves to drive all process on the ESP32 MCU for our project
-// Features include: WiFi connectivity, data transmission over wifi, Locally 
+// Features include: WiFi connectivity, data transmission over wifi, Locally
 // hosted network, sensor data processing, motor controls, basic coding functionality
 // Located remotely in https://github.com/FORWARD-Walker/software
 
 // # Include
-#include <Wire.h> // I2C
+#include <Wire.h>  // I2C
 #include "Sonar.h"
 #include "Lidar.h"
 #include "Imu.h"
@@ -17,38 +17,42 @@
 // # Defines
 #define LED 2
 
+// I2C bus
+#define SCL 14
+#define SDA 12
+
 // Sonar Pins
-#define TRIG1 32 // Trigger pin for sensor 1
-#define ECHO1 36 // Echo pin for sensor 1
-#define TRIG2 33 // Trigger pin for sensor 2
-#define ECHO2 39 // Echo pin for sensor 2
-#define TRIG3 25 // Trigger pin for sensor 3
-#define ECHO3 34 // Echo pin for sensor 3
-#define TRIG4 26 // Trigger pin for sensor 4
-#define ECHO4 35 // Echo pin for sensor 4
+#define TRIG1 34  // Trigger pin for sensor 1
+#define ECHO1 36  // Echo pin for sensor 1
+#define TRIG2 15  // Trigger pin for sensor 2
+#define ECHO2 39  // Echo pin for sensor 2
+#define TRIG3 21  // Trigger pin for sensor 3
+#define ECHO3 19  // Echo pin for sensor 3
+#define TRIG4 23  // Trigger pin for sensor 4
+#define ECHO4 22  // Echo pin for sensor 4
 
 // Haptic pins
-#define LHMP1 19 // Left Haptic motor pin 1
-#define LHMP2 18 // Left Haptic motor pin 2
-#define LHME 27  // Left Haptic motor enable pin
-#define RHMP1 17 // Right Haptic motor pin 1
-#define RHMP2 16 // Right Haptic motor pin 2
-#define RHME 14  // Right Haptic motor enable pin
+#define LHMP1 35  // Left Haptic motor pin 1
+#define LHMP2 32  // Left Haptic motor pin 2
+#define LHME 26   // Left Haptic motor enable pin
+#define RHMP1 33  // Right Haptic motor pin 1
+#define RHMP2 25    // Right Haptic motor pin 2
+#define RHME 27   // Right Haptic motor enable pin
 
 // Wheel Pins
-#define LWMPF 4 // Left Wheel motor pin 1
-#define LWMPR 0 // Left Wheel motor pin 2
-#define RWMPF 13 // Right Wheel motor pin 1
-#define RWMPR 15 // Right Wheel motor pin 2
+#define LWMPF 16  // Left Wheel motor pin 1
+#define LWMPR 17  // Left Wheel motor pin 2
+#define RWMPF 5  // Right Wheel motor pin 1
+#define RWMPR 18   // Right Wheel motor pin 2
 
 // Boolean flags
-bool hostNetwork = true; // Set to host network
-bool useCV = true; // Set to use computer vision
-bool useSonar = false; // Set to use sonar functions
-bool useLidar = false; // Set to use LiDAR functions
-bool useImu = false; // Set to use IMU
-bool useHaptics = false; // Set to use Haptics
-bool useWheels = false; // Set to use Wheels
+bool hostNetwork = true;  // Set to host network
+bool useCV = true;       // Set to use computer vision
+bool useSonar = false;    // Set to use sonar functions
+bool useLidar = false;    // Set to use LiDAR functions
+bool useImu = false;      // Set to use IMU
+bool useHaptics = false;  // Set to use Haptics
+bool useWheels = false;   // Set to use Wheels
 
 // Network Object
 Networking* pNetworking = NULL;
@@ -74,14 +78,15 @@ Wheel* pWheelL = NULL;
 Wheel* pWheelR = NULL;
 
 // Timer Objects
-hw_timer_t *Timer_1Hz = NULL;
-hw_timer_t *Timer_10Hz = NULL;
-hw_timer_t *Timer_30Hz = NULL;
+hw_timer_t* Timer_1Hz = NULL;
+hw_timer_t* Timer_10Hz = NULL;
+hw_timer_t* Timer_30Hz = NULL;
 
 // Helper Function Prototypes
 void Update_Data();
 void Test_System();
 void Send_Sensor_Data();
+void Sample_GNC_Alg();
 
 // ISR prototypes
 static void IRAM_ATTR Timer_1Hz_ISR();
@@ -92,14 +97,14 @@ static void IRAM_ATTR Timer_30Hz_ISR();
 void setup()
 {
   // Set up serial
-  Serial.begin(115200); // Init Serial
+  Serial.begin(115200);  // Init Serial
 
   // Set up I2C
-  Wire.begin();
+  Wire.begin(SDA, SCL);
 
   // Setup heartbeat
-  pinMode(LED, OUTPUT); // Set up LED as output
-  digitalWrite(LED, HIGH); // Init to high
+  pinMode(LED, OUTPUT);     // Set up LED as output
+  digitalWrite(LED, HIGH);  // Init to high
 
   // Setup Timers and Interrupts
   // Timer 1 Hz
@@ -110,22 +115,22 @@ void setup()
   // Timer 10 Hz
   Timer_10Hz = timerBegin(10000000);
   timerAttachInterrupt(Timer_10Hz, &Timer_10Hz_ISR);
-  timerAlarm(Timer_10Hz, 1000000, true, 0);  
-  
+  timerAlarm(Timer_10Hz, 1000000, true, 0);
+
   // Timer 30 Hz
   Timer_30Hz = timerBegin(30000000);
   timerAttachInterrupt(Timer_30Hz, &Timer_30Hz_ISR);
   timerAlarm(Timer_30Hz, 1000000, true, 0);
 
   // Setup if ESP32 is hosting a network
-  if(hostNetwork)
+  if (hostNetwork)
   {
     pNetworking = new Networking();  // Init object
     pNetworking->pushSerialData("Network Initialized!\n");
   }
 
   // Setup Sonar sensors if connected
-  if(useSonar)
+  if (useSonar)
   {
     // Initizalize the Sonar objects
     pS1 = new Sonar(TRIG1, ECHO1);
@@ -136,35 +141,35 @@ void setup()
     pNetworking->pushSerialData("S3: " + pS3->printPins());
     pS4 = new Sonar(TRIG4, ECHO4);
     pNetworking->pushSerialData("S4: " + pS4->printPins());
-    pNetworking->pushSerialData("Sonar Initialized!\n"); // Print confirmation
+    pNetworking->pushSerialData("Sonar Initialized!\n");  // Print confirmation
   }
 
   // Initizalize the LiDAR object
-  if(useLidar)
+  if (useLidar)
   {
     pLidar = new Lidar();  // Init object
     pNetworking->pushSerialData("LiDAR Initialized!\n");
   }
 
   // Intialize IMU object
-  if(useImu)
+  if (useImu)
   {
-    pIMU = new Imu(); // Init object
-    pNetworking->pushSerialData("IMU Initialized!\n"); // Print confirmation
+    pIMU = new Imu();                                   // Init object
+    pNetworking->pushSerialData("IMU Initialized!\n");  // Print confirmation
   }
 
   // Initialize Haptics Objects
-  if(useHaptics)
+  if (useHaptics)
   {
     pHapticL = new Haptic(LHMP1, LHMP2, LHME);  // Init object
     pNetworking->pushSerialData("Left Haptic: " + pHapticL->printPins());
     pHapticR = new Haptic(RHMP1, RHMP2, RHME);  // Init object
     pNetworking->pushSerialData("Right Haptic: " + pHapticR->printPins());
-    pNetworking->pushSerialData("Haptics Initialized!\n"); // Print confirmation
+    pNetworking->pushSerialData("Haptics Initialized!\n");  // Print confirmation
   }
 
   // Initialize Wheel Objects
-  if(useWheels)
+  if (useWheels)
   {
     pWheelL = new Wheel(LWMPF, LWMPR);  // Init object
     pNetworking->pushSerialData("Left Wheek: " + pWheelL->printPins());
@@ -172,7 +177,7 @@ void setup()
     pWheelR = new Wheel(RWMPF, RWMPR);  // Init object
     pNetworking->pushSerialData(" Right Wheel: " + pWheelR->printPins());
     pWheelR->stopWheel();
-    pNetworking->pushSerialData("Wheels Initialized!\n"); // Print confirmation
+    pNetworking->pushSerialData("Wheels Initialized!\n");  // Print confirmation
   }
 }
 
@@ -182,10 +187,10 @@ bool Timer_10HZ_FG = false;
 bool Timer_30HZ_FG = false;
 
 // Main loop
-void loop()
-{    
+void loop() 
+{
   // 1 HZ ISR
-  if(Timer_1HZ_FG)
+  if (Timer_1HZ_FG)
   {
     digitalWrite(LED, digitalRead(LED) ^ 1);  // Heartbeat
 
@@ -194,23 +199,22 @@ void loop()
   }
 
   // 10 HZ ISR
-  if(Timer_10HZ_FG)
+  if (Timer_10HZ_FG)
   {
 
     // Reset ISR
     Timer_10HZ_FG = false;
-  }  
-  
+  }
+
   // 30 HZ ISR
-  if(Timer_30HZ_FG)
+  if (Timer_30HZ_FG)
   {
-    Update_Data(); // Update Sensor Data
-    Send_Sensor_Data(); // Push Serial Data 
+    Update_Data();       // Update Sensor Data
+    Send_Sensor_Data();  // Push Serial Data
 
     // Reset ISR
     Timer_30HZ_FG = false;
   }
-
 }
 
 // ISR's
@@ -229,32 +233,32 @@ static void IRAM_ATTR Timer_10Hz_ISR()
 // Ever 33 msec (30 FPS)
 static void IRAM_ATTR Timer_30Hz_ISR()
 {
-    Timer_30HZ_FG = true;
+  Timer_30HZ_FG = true;
 }
 
 // Update Sensor Data
 void Update_Data()
 {
-    // Update Sonar Distances
-    if (useSonar)
-    {
-        pS1->readDistance();
-        pS2->readDistance();
-        pS3->readDistance();
-        pS4->readDistance();
-    }
+  // Update Sonar Distances
+  if (useSonar)
+  {
+    pS1->readDistance();
+    pS2->readDistance();
+    pS3->readDistance();
+    pS4->readDistance();
+  }
 
-    // Update LiDAR Distances
-    if (useLidar)
-    {
-        pLidar->readDistance();
-    }
+  // Update LiDAR Distances
+  if (useLidar)
+  {
+    pLidar->readDistance();
+  }
 
-    // Update IMU readings
-    if (useImu)
-    {
-        pIMU->updateData();
-    }
+  // Update IMU readings
+  if (useImu) 
+  {
+    pIMU->updateData();
+  }
 }
 
 // send Sensor data to website (http://192.168.4.1)
@@ -262,8 +266,7 @@ void Send_Sensor_Data()
 {
   String sensorData = "";
 
-  if(useSonar)
-  {
+  if (useSonar) {
     sensorData += "S1: ";
     sensorData += pS1->distance;
     sensorData += " S2: ";
@@ -275,15 +278,13 @@ void Send_Sensor_Data()
     sensorData += '\n';
   }
 
-  if(useLidar)
-  {
+  if (useLidar) {
     sensorData += "LiDAR: ";
     sensorData += pLidar->distance;
     sensorData += '\n';
   }
 
-  if(useImu)
-  {
+  if (useImu) {
     sensorData += "Roll: ";
     sensorData += pIMU->roll;
     sensorData += " Pitch: ";
@@ -296,7 +297,7 @@ void Send_Sensor_Data()
   if(useCV)
   {
     char data[1024];
-    pNetworking->getTCPStream(data, 1024);
+    pNetworking->getUDPPacket(data, sizeof(data));
     sensorData += data;
   }
 
@@ -307,7 +308,7 @@ void Send_Sensor_Data()
 // Run full system test
 void Test_System()
 {
-  if(useCV && useHaptics && useImu && useLidar && useSonar && useWheels)
+  if (useCV && useHaptics && useImu && useLidar && useSonar && useWheels)
   {
     Send_Sensor_Data();
     Serial.println("Running Wheels!");
@@ -324,23 +325,21 @@ void Test_System()
   }
 }
 
-void Sample_GNC_Alg()
-{
-  if(useCV && useHaptics && useImu && useLidar && useSonar && useWheels)
+void Sample_GNC_Alg() {
+  if (useCV && useHaptics && useImu && useLidar && useSonar && useWheels)
   {
     // Example avoidance of object in front
-    if(!pWheelL->spinning) pWheelL->startWheel(350, true);
-    if(!pWheelR->spinning) pWheelR->startWheel(350, true);
+    if (!pWheelL->spinning) pWheelL->startWheel(350, true);
+    if (!pWheelR->spinning) pWheelR->startWheel(350, true);
 
-    if (pS2->distance < 50 || pS3->distance < 50)
-    {
+    if (pS2->distance < 50 || pS3->distance < 50) {
       pWheelL->startWheel(350, false);
       pWheelR->startWheel(350, false);
       pHapticL->startHaptic(3);
       pHapticR->startHaptic(3);
       delay(1000);
       pWheelL->stopWheel();
-      pWheelR->stopWheel(); 
+      pWheelR->stopWheel();
       delay(2000);
       pWheelL->startWheel(350, true);
       pWheelR->startWheel(350, false);
@@ -352,4 +351,3 @@ void Sample_GNC_Alg()
     }
   }
 }
-
