@@ -15,41 +15,45 @@
 #include "Wheel.h"
 
 // # Defines
-#define LED 2
-
-// I2C bus
-#define SCL 14
-#define SDA 12
+//#define LED 2
 
 // Sonar Pins
-#define TRIG1 34  // Trigger pin for sensor 1
-#define ECHO1 36  // Echo pin for sensor 1
-#define TRIG2 15  // Trigger pin for sensor 2
-#define ECHO2 39  // Echo pin for sensor 2
-#define TRIG3 21  // Trigger pin for sensor 3
+#define TRIG1 32  // Trigger pin for sensor 1
+#define ECHO1 34  // Echo pin for sensor 1
+#define TRIG2 33  // Trigger pin for sensor 2
+#define ECHO2 35  // Echo pin for sensor 2
+#define TRIG3 2  // Trigger pin for sensor 3
 #define ECHO3 19  // Echo pin for sensor 3
-#define TRIG4 23  // Trigger pin for sensor 4
-#define ECHO4 22  // Echo pin for sensor 4
+#define TRIG4 15  // Trigger pin for sensor 4
+#define ECHO4 23  // Echo pin for sensor 4
 
 // Haptic pins
-#define LHMP1 35  // Left Haptic motor pin 1
-#define LHMP2 32  // Left Haptic motor pin 2
-#define LHME 26   // Left Haptic motor enable pin
-#define RHMP1 33  // Right Haptic motor pin 1
-#define RHMP2 25    // Right Haptic motor pin 2
-#define RHME 27   // Right Haptic motor enable pin
-
+#define LHMP1 27  // Left Haptic motor pin 1
+#define LHMP2 26  // Left Haptic motor pin 2
+#define LHME  12  // Left Haptic motor enable pin
+#define RHMP1 25  // Right Haptic motor pin 1
+#define RHMP2 13  // Right Haptic motor pin 2
+#define RHME  14   // Right Haptic motor enable pin
+                                     
 // Wheel Pins
 #define LWMPF 16  // Left Wheel motor pin 1
 #define LWMPR 17  // Left Wheel motor pin 2
-#define RWMPF 5  // Right Wheel motor pin 1
-#define RWMPR 18   // Right Wheel motor pin 2
+#define RWMPF 18  // Right Wheel motor pin 1
+#define RWMPR 5  // Right Wheel motor pin 2
+
+// Potentiometer
+#define POW   39
+
+// Photo Resistor
+#define PHOTO 36
+
+// Head Light
+#define LIGHT 4
 
 // Boolean flags
-bool hostNetwork = true;  // Set to host network
-bool useCV = true;       // Set to use computer vision
+bool useCV = false;       // Set to use computer vision
 bool useSonar = false;    // Set to use sonar functions
-bool useLidar = false;    // Set to use LiDAR functions
+bool useLidar = true;    // Set to use LiDAR functions
 bool useImu = false;      // Set to use IMU
 bool useHaptics = false;  // Set to use Haptics
 bool useWheels = false;   // Set to use Wheels
@@ -100,11 +104,11 @@ void setup()
   Serial.begin(115200);  // Init Serial
 
   // Set up I2C
-  Wire.begin(SDA, SCL);
+  Wire.begin(32,33);
 
   // Setup heartbeat
-  pinMode(LED, OUTPUT);     // Set up LED as output
-  digitalWrite(LED, HIGH);  // Init to high
+  //pinMode(LED, OUTPUT);     // Set up LED as output
+  //digitalWrite(LED, HIGH);  // Init to high
 
   // Setup Timers and Interrupts
   // Timer 1 Hz
@@ -123,11 +127,8 @@ void setup()
   timerAlarm(Timer_30Hz, 1000000, true, 0);
 
   // Setup if ESP32 is hosting a network
-  if (hostNetwork)
-  {
-    pNetworking = new Networking();  // Init object
-    pNetworking->pushSerialData("Network Initialized!\n");
-  }
+  pNetworking = new Networking();  // Init object
+  pNetworking->pushSerialData("Network Initialized!\n");
 
   // Setup Sonar sensors if connected
   if (useSonar)
@@ -192,7 +193,9 @@ void loop()
   // 1 HZ ISR
   if (Timer_1HZ_FG)
   {
-    digitalWrite(LED, digitalRead(LED) ^ 1);  // Heartbeat
+    //digitalWrite(LED, digitalRead(LED) ^ 1);  // Heartbeat
+    Update_Data();
+    Send_Sensor_Data();
 
     // Reset ISR
     Timer_1HZ_FG = false;
@@ -209,8 +212,8 @@ void loop()
   // 30 HZ ISR
   if (Timer_30HZ_FG)
   {
-    Update_Data();       // Update Sensor Data
-    Send_Sensor_Data();  // Push Serial Data
+   // Update_Data();       // Update Sensor Data
+    //Send_Sensor_Data();  // Push Serial Data
 
     // Reset ISR
     Timer_30HZ_FG = false;

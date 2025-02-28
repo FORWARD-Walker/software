@@ -1,0 +1,69 @@
+#include "Haptic.h"
+
+#define freq 30000
+#define pwmChannel 0
+#define resolution 8
+
+// Create object
+Haptic::Haptic(int motorPin1, int motorPin2, int enPin)
+{
+    this->motorPin1 = motorPin1;
+    this->motorPin2 = motorPin2;
+    this->enPin = enPin;
+    this->setup();
+    this->buzzing = false;
+    this->curSpeed = 0;
+}
+
+// Set up object
+void Haptic::setup()
+{
+    // Set up haptic motors
+    pinMode(this->motorPin1, OUTPUT);
+    pinMode(this->motorPin2, OUTPUT);
+    pinMode(this->enPin, OUTPUT);
+
+    // configure LEDC PWM
+    ledcAttachChannel(this->enPin, freq, resolution, pwmChannel);
+}
+
+void Haptic::startHaptic(int level)
+{
+    // Determine duty cycles
+    if (level == 1)
+    {
+        dutyCycle = 150;
+    }
+    else if (level == 2)
+    {
+        dutyCycle = 200;
+    }
+    else if (level == 3)
+    {
+        dutyCycle = 255;
+    }
+    this->curSpeed = level;
+    this->buzzing = true;
+
+    ledcWrite(this->enPin, dutyCycle);
+
+    // while the distance is within a little over a foot, vibrate haptics
+    // Move the haptic
+    digitalWrite(this->motorPin1, LOW);
+    digitalWrite(this->motorPin2, HIGH);
+}
+
+void Haptic::stopHaptic()
+{
+    // Stop the haptic motor
+    digitalWrite(this->motorPin1, LOW);
+    digitalWrite(this->motorPin2, LOW);
+    this->curSpeed = 0;
+    this->buzzing = false;
+}
+
+// Print to serial the current pinouts
+String Haptic::printPins()
+{
+    return String("Motor Pin 1: ") + this->motorPin1 + String(" Motor Pin 2: ") + this->motorPin2 + String(" Enable Pin: ") + this->enPin + "\n"; 
+}
