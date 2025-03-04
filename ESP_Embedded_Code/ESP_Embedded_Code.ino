@@ -42,12 +42,12 @@
 #define RWMPR 5  // Right Wheel motor pin 2
 
 // Boolean flags
-bool useCV = false; // Set to use computer vision
-bool useSonar = false; // Set to use sonar functions
+bool useCV = true; // Set to use computer vision
+bool useSonar = true; // Set to use sonar functions
 bool useLidar = false; // Set to use LiDAR functions
-bool useImu = false; // Set to use IMU
+bool useImu = true; // Set to use IMU
 bool useHaptics = false; // Set to use Haptics
-bool useWheels = false; // Set to use Wheels
+bool useWheels = true; // Set to use Wheels
 
 // Network Object
 Networking* pNetworking = NULL;
@@ -170,8 +170,6 @@ void setup()
     pNetworking->pushSerialData("Right Wheel: " + pWheelR->printPins());
     pNetworking->pushSerialData("Wheels Initialized!\n"); // Print confirmation
   }
-
-  //Test_System();
 }
 
 // Boolean Processing Flags
@@ -186,24 +184,27 @@ void loop()
   if(Timer_1HZ_FG)
   {
     digitalWrite(LED, digitalRead(LED) ^ 1);  // Heartbeat
-   // Send_Sensor_Data(); // Push Serial Data
+    Send_Sensor_Data(); // Push Serial Data
     Timer_1HZ_FG = false;
   }
 
   // 10 HZ ISR
-  /*if(Timer_10HZ_FG)
+  if(Timer_10HZ_FG)
   {
     if(pS2->distance < 100 || pS3->distance < 100)
     {
+      pNetworking->pushSerialData("Object within 1 meter!\n");
       if(pS2->distance > pS3->distance)
       {
+        pNetworking->pushSerialData("Veering Left!\n");
         veer(45.0, true);
-        pulseHaptic(3, true);
+       // pulseHaptic(3, true);
       }
       else
       {
+        pNetworking->pushSerialData("Veering Right!\n");
         veer(45.0, false);
-        pulseHaptic(3, false);
+       // pulseHaptic(3, false);
       }
     }
     Timer_10HZ_FG = false;
@@ -216,7 +217,7 @@ void loop()
 
     Timer_30HZ_FG = false;
   }
-*/
+
 }
 
 
