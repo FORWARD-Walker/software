@@ -42,13 +42,12 @@
 #define RWMPR 5  // Right Wheel motor pin 2
 
 // Boolean flags
-bool hostNetwork = true; // Set to host network
-bool useCV = true; // Set to use computer vision
-bool useSonar = true; // Set to use sonar functions
-bool useLidar = true; // Set to use LiDAR functions
-bool useImu = true; // Set to use IMU
-bool useHaptics = true; // Set to use Haptics
-bool useWheels = true; // Set to use Wheels
+bool useCV = false; // Set to use computer vision
+bool useSonar = false; // Set to use sonar functions
+bool useLidar = false; // Set to use LiDAR functions
+bool useImu = false; // Set to use IMU
+bool useHaptics = false; // Set to use Haptics
+bool useWheels = false; // Set to use Wheels
 
 // Network Object
 Networking* pNetworking = NULL;
@@ -82,6 +81,8 @@ hw_timer_t *Timer_30Hz = NULL;
 void Update_Data();
 void Test_System();
 void Send_Sensor_Data();
+void veer(float aspect, bool left);
+void pulseHaptic(int urgency, bool left);
 
 // ISR prototypes
 static void IRAM_ATTR Timer_1Hz_ISR();
@@ -118,11 +119,8 @@ void setup()
   timerAlarm(Timer_30Hz, 1000000, true, 0);
 
   // Setup if ESP32 is hosting a network
-  if(hostNetwork)
-  {
-    pNetworking = new Networking();  // Init object
-    pNetworking->pushSerialData("Network Initialized!\n");
-  }
+  pNetworking = new Networking();  // Init object
+  pNetworking->pushSerialData("Network Initialized!\n");
 
   // Setup Sonar sensors if connected
   if(useSonar)
@@ -173,7 +171,7 @@ void setup()
     pNetworking->pushSerialData("Wheels Initialized!\n"); // Print confirmation
   }
 
-  Test_System();
+  //Test_System();
 }
 
 // Boolean Processing Flags
@@ -188,14 +186,26 @@ void loop()
   if(Timer_1HZ_FG)
   {
     digitalWrite(LED, digitalRead(LED) ^ 1);  // Heartbeat
-    Send_Sensor_Data(); // Push Serial Data
+   // Send_Sensor_Data(); // Push Serial Data
     Timer_1HZ_FG = false;
   }
 
   // 10 HZ ISR
-  if(Timer_10HZ_FG)
+  /*if(Timer_10HZ_FG)
   {
-    
+    if(pS2->distance < 100 || pS3->distance < 100)
+    {
+      if(pS2->distance > pS3->distance)
+      {
+        veer(45.0, true);
+        pulseHaptic(3, true);
+      }
+      else
+      {
+        veer(45.0, false);
+        pulseHaptic(3, false);
+      }
+    }
     Timer_10HZ_FG = false;
   }  
   
@@ -206,7 +216,7 @@ void loop()
 
     Timer_30HZ_FG = false;
   }
-
+*/
 }
 
 
@@ -350,3 +360,116 @@ void Sample_GNC_Alg()
   }
 }
 
+// routine to stop and pivot the walker by [aspect] degrees
+void veer(float aspect, bool left)
+{
+  pWheelL->stopWheel();
+  pWheelR->stopWheel();
+  float heading = pIMU->yaw;
+  if (left)
+  {
+    float desired_heading = heading - aspect;
+    pWheelR->startWheel(350, true);
+    while(heading != desired_heading){}
+    pWheelR->stopWheel();
+  }
+  else
+  {
+    float desired_heading = heading + aspect;
+    pWheelL->startWheel(350, true);
+    while(heading != desired_heading){}
+    pWheelL->stopWheel();
+  }
+}
+
+// haptic pulse patterns
+// urgency determined by range and by amount of obstacles
+// left haptic buzzes if there are obstacles on left of LiDAR beam
+void pulseHaptic(int urgency, bool left)
+{
+  if (urgency==1)
+  {
+    if (left)
+    {
+      pHapticL->startHaptic(urgency);
+      delay(500);
+      pHapticL->stopHaptic();
+      pHapticL->startHaptic(urgency);
+      delay(500);
+      pHapticL->stopHaptic();
+      pHapticL->startHaptic(urgency);
+      delay(500);
+      pHapticL->stopHaptic();
+    }
+    else
+    {
+      pHapticR->startHaptic(urgency);
+      delay(500);
+      pHapticR->stopHaptic();
+      pHapticR->startHaptic(urgency);
+      delay(500);
+      pHapticR->stopHaptic();
+      pHapticR->startHaptic(urgency);
+      delay(500);
+      pHapticR->stopHaptic();
+    }
+  }
+  else if (urgency==2)
+  {
+    if (left)
+    {
+      pHapticL->startHaptic(urgency);
+      delay(250);
+      pHapticL->stopHaptic();
+      pHapticL->startHaptic(urgency);
+      delay(250);
+      pHapticL->stopHaptic();
+      pHapticL->startHaptic(urgency);
+      delay(250);
+      pHapticL->stopHaptic();
+    }
+    else
+    {
+      pHapticR->startHaptic(urgency);
+      delay(250);
+      pHapticR->stopHaptic();
+      pHapticR->startHaptic(urgency);
+      delay(250);
+      pHapticR->stopHaptic();
+      pHapticR->startHaptic(urgency);
+      delay(250);
+      pHapticR->stopHaptic();
+    }
+  }
+  else if (urgency==3)
+  {
+    if (left)
+    {
+      pHapticL->startHaptic(urgency);
+      delay(100);
+      pHapticL->stopHaptic();
+      pHapticL->startHaptic(urgency);
+      delay(100);
+      pHapticL->stopHaptic();
+      pHapticL->startHaptic(urgency);
+      delay(100);
+      pHapticL->stopHaptic();
+    }
+    else
+    {
+      pHapticR->startHaptic(urgency);
+      delay(100);
+      pHapticR->stopHaptic();
+      pHapticR->startHaptic(urgency);
+      delay(100);
+      pHapticR->stopHaptic();
+      pHapticR->startHaptic(urgency);
+      delay(100);
+      pHapticR->stopHaptic();
+    }
+  }
+  else
+  {
+    Serial.println("Invalid pulse code.");
+  }
+}
