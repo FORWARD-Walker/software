@@ -18,37 +18,37 @@
 #define LED 2
 
 // Sonar Pins
-#define TRIG1 32 // Trigger pin for sensor 1
-#define ECHO1 36 // Echo pin for sensor 1
-#define TRIG2 33 // Trigger pin for sensor 2
-#define ECHO2 39 // Echo pin for sensor 2
-#define TRIG3 25 // Trigger pin for sensor 3
-#define ECHO3 34 // Echo pin for sensor 3
-#define TRIG4 26 // Trigger pin for sensor 4
-#define ECHO4 35 // Echo pin for sensor 4
+#define TRIG1 32  // Trigger pin for sensor 1
+#define ECHO1 34  // Echo pin for sensor 1
+#define TRIG2 33  // Trigger pin for sensor 2
+#define ECHO2 35  // Echo pin for sensor 2
+#define TRIG3 4  // Trigger pin for sensor 3
+#define ECHO3 19  // Echo pin for sensor 3
+#define TRIG4 15  // Trigger pin for sensor 4
+#define ECHO4 23  // Echo pin for sensor 4
 
 // Haptic pins
-#define LHMP1 19 // Left Haptic motor pin 1
-#define LHMP2 18 // Left Haptic motor pin 2
-#define LHME 27  // Left Haptic motor enable pin
-#define RHMP1 17 // Right Haptic motor pin 1
-#define RHMP2 16 // Right Haptic motor pin 2
-#define RHME 14  // Right Haptic motor enable pin
-
+#define LHMP1 27  // Left Haptic motor pin 1
+#define LHMP2 26  // Left Haptic motor pin 2
+#define LHME  12  // Left Haptic motor enable pin
+#define RHMP1 25  // Right Haptic motor pin 1
+#define RHMP2 13  // Right Haptic motor pin 2
+#define RHME  14   // Right Haptic motor enable pin
+                                     
 // Wheel Pins
-#define LWMPF 4 // Left Wheel motor pin 1
-#define LWMPR 0 // Left Wheel motor pin 2
-#define RWMPF 2 // Right Wheel motor pin 1
-#define RWMPR 15 // Right Wheel motor pin 2
+#define LWMPF 16  // Left Wheel motor pin 1
+#define LWMPR 17  // Left Wheel motor pin 2
+#define RWMPF 18  // Right Wheel motor pin 1
+#define RWMPR 5  // Right Wheel motor pin 2
 
 // Boolean flags
-bool hostNetwork = false; // Set to host network
-bool useCV = false; // Set to use computer vision
-bool useSonar = false; // Set to use sonar functions
-bool useLidar = false; // Set to use LiDAR functions
-bool useImu = false; // Set to use IMU
-bool useHaptics = false; // Set to use Haptics
-bool useWheels = false; // Set to use Wheels
+bool hostNetwork = true; // Set to host network
+bool useCV = true; // Set to use computer vision
+bool useSonar = true; // Set to use sonar functions
+bool useLidar = true; // Set to use LiDAR functions
+bool useImu = true; // Set to use IMU
+bool useHaptics = true; // Set to use Haptics
+bool useWheels = true; // Set to use Wheels
 
 // Network Object
 Networking* pNetworking = NULL;
@@ -172,6 +172,8 @@ void setup()
     pNetworking->pushSerialData("Right Wheel: " + pWheelR->printPins());
     pNetworking->pushSerialData("Wheels Initialized!\n"); // Print confirmation
   }
+
+  Test_System();
 }
 
 // Boolean Processing Flags
@@ -186,7 +188,6 @@ void loop()
   if(Timer_1HZ_FG)
   {
     digitalWrite(LED, digitalRead(LED) ^ 1);  // Heartbeat
-    Update_Data(); // Update Sensor Data
     Send_Sensor_Data(); // Push Serial Data
     Timer_1HZ_FG = false;
   }
@@ -194,16 +195,20 @@ void loop()
   // 10 HZ ISR
   if(Timer_10HZ_FG)
   {
+    
     Timer_10HZ_FG = false;
   }  
   
   // 30 HZ ISR
   if(Timer_30HZ_FG)
   {
+    Update_Data(); // Update Sensor Data
+
     Timer_30HZ_FG = false;
   }
 
 }
+
 
 // ISR's
 // Every 1 second (1 FPS)
