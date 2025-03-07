@@ -95,7 +95,7 @@ void setup()
   Serial.begin(115200); // Init Serial
 
   // Set up I2C
-  Wire.begin();
+  Wire.begin(32,33);
 
   // Setup heartbeat
   pinMode(LED, OUTPUT); // Set up LED as output

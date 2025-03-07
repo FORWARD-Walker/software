@@ -25,28 +25,18 @@ WiFiUDP udp; // Websocket object
 const int localPort = 12345; // Port to listen too
 
 // Set up code
-void setup() {
+void setup() 
+{
     Serial.begin(115200); // Start serial
 
     // Attempt to connect to the access point
-    Serial.println("Connecting to Access Point...");
     WiFi.begin(ssid, pass);
 
     // Wait until the ESP32 is connected to the AP
-    while (WiFi.status() != WL_CONNECTED) {
-      delay(500);
-      Serial.print(".");
-    }
-
-    // Display local IP address of the client
-    Serial.println("Connected to the AP");
-    Serial.print("Client IP Address: ");
-    Serial.println(WiFi.localIP());
+    while (WiFi.status() != WL_CONNECTED) { delay(500); }
 
     // UDP client setup
     udp.begin(localPort);
-    Serial.print("UDP server started at port: ");
-    Serial.println(localPort);
 
     // Configure camera video channels with video format information
     config.setBitrate(2 * 1024 * 1024);     // Recommend to use 2Mbps for RTSP streaming to prevent network congestion
@@ -57,7 +47,7 @@ void setup() {
     // Configure object detection with corresponding video format information
     // Select Neural Network(NN) task and models
     ObjDet.configVideo(configNN);
-    ObjDet.modelSelect(OBJECT_DETECTION, DEFAULT_YOLOV4TINY, NA_MODEL, NA_MODEL);
+    ObjDet.modelSelect(OBJECT_DETECTION, DEFAULT_YOLOV7TINY, NA_MODEL, NA_MODEL);
     ObjDet.begin();
 
     // Configure StreamIO object to stream data from RGB video channel to object detection
@@ -65,7 +55,8 @@ void setup() {
     videoStreamerNN.setStackSize();
     videoStreamerNN.setTaskPriority();
     videoStreamerNN.registerOutput(ObjDet);
-    if (videoStreamerNN.begin() != 0) {
+    if (videoStreamerNN.begin() != 0)
+    {
         Serial.println("StreamIO link start failed");
     }
 
@@ -74,13 +65,11 @@ void setup() {
 
 }
 
-void loop() {
-
+void loop()
+{
   // Wait for flag to be asserted (1 byte)
   uint8_t txFG = 0;
-  while(txFG != 1){
-    udp.read(&txFG, 1);
-  }
+  while(txFG != 1){ udp.read(&txFG, 1); }
   
   // Get results
   std::vector<ObjectDetectionResult> results = ObjDet.getResult();
@@ -89,7 +78,7 @@ void loop() {
   uint16_t im_w = config.width(); //1920
 
   // Convert the result count to string and send it
-  char resultStr[512];
+  char resultStr[1024];
   sprintf(resultStr, "# of Objects: %d\n", ObjDet.getResultCount());
 
   if (ObjDet.getResultCount() > 0) {
@@ -119,10 +108,9 @@ void loop() {
 }
 
 /////////////// Functions ///////////////
-void writeMsg(char* msg){
-  Serial.println((const char*)msg);
+void writeMsg(char* msg)
+{
   udp.beginPacket("192.168.4.1", localPort); // IP of destination device
   udp.write((const char*)msg);
   udp.endPacket();
 }
-
