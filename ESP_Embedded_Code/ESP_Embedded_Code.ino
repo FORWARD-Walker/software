@@ -49,6 +49,9 @@ bool useWheels = true; // Set to use Wheels
 // Network Object
 Networking* pNetworking = NULL;
 
+// Utils
+utils* utils;
+
 // Sensor Objects
 Sonar* pS1 = NULL;
 Sonar* pS2 = NULL;
