@@ -14,41 +14,37 @@
 #include "Haptic.h"
 #include "Wheel.h"
 
-// # Defines
-#define LED 2
-
 // Sonar Pins
-#define TRIG1 32 // Trigger pin for sensor 1
-#define ECHO1 36 // Echo pin for sensor 1
-#define TRIG2 33 // Trigger pin for sensor 2
-#define ECHO2 39 // Echo pin for sensor 2
-#define TRIG3 25 // Trigger pin for sensor 3
-#define ECHO3 34 // Echo pin for sensor 3
-#define TRIG4 26 // Trigger pin for sensor 4
-#define ECHO4 35 // Echo pin for sensor 4
+#define TRIG1 25  // Trigger pin for sensor 1
+#define ECHO1 34  // Echo pin for sensor 1
+#define TRIG2 26  // Trigger pin for sensor 2
+#define ECHO2 35  // Echo pin for sensor 2
+#define TRIG3 22  // Trigger pin for sensor 3
+#define ECHO3 23  // Echo pin for sensor 3
+#define TRIG4 19  // Trigger pin for sensor 4
+#define ECHO4 21  // Echo pin for sensor 4
 
 // Haptic pins
-#define LHMP1 19 // Left Haptic motor pin 1
-#define LHMP2 18 // Left Haptic motor pin 2
-#define LHME 27  // Left Haptic motor enable pin
-#define RHMP1 17 // Right Haptic motor pin 1
-#define RHMP2 16 // Right Haptic motor pin 2
-#define RHME 14  // Right Haptic motor enable pin
+#define LHMP1 12  // Left Haptic motor pin 1
+#define LHMP2 13  // Left Haptic motor pin 2
+#define LHME  27  // Left Haptic motor enable pin
+#define RHMP1 15  // Right Haptic motor pin 1
+#define RHMP2 2  // Right Haptic motor pin 2
+#define RHME  14   // Right Haptic motor enable pin
 
 // Wheel Pins
-#define LWMPF 4 // Left Wheel motor pin 1
-#define LWMPR 0 // Left Wheel motor pin 2
-#define RWMPF 2 // Right Wheel motor pin 1
-#define RWMPR 15 // Right Wheel motor pin 2
+#define LWMPF 16  // Left Wheel motor pin 1
+#define LWMPR 17  // Left Wheel motor pin 2
+#define RWMPF 5  // Right Wheel motor pin 1
+#define RWMPR 18  // Right Wheel motor pin 2
 
 // Boolean flags
-bool hostNetwork = false; // Set to host network
 bool useCV = false; // Set to use computer vision
-bool useSonar = false; // Set to use sonar functions
+bool useSonar = true; // Set to use sonar functions
 bool useLidar = false; // Set to use LiDAR functions
 bool useImu = false; // Set to use IMU
 bool useHaptics = false; // Set to use Haptics
-bool useWheels = false; // Set to use Wheels
+bool useWheels = true; // Set to use Wheels
 
 // Network Object
 Networking* pNetworking = NULL;
@@ -80,8 +76,13 @@ hw_timer_t *Timer_30Hz = NULL;
 
 // Helper Function Prototypes
 void Update_Data();
-void Test_System();
 void Send_Sensor_Data();
+void Sample_Haptic_Buzz();
+void Sample_Sonar_Avoidance();
+void braking_demo();
+void veer(float aspect, char direction);
+void pivot(float aspect, char direction);
+void pulseHaptic(int urgency, char direction);
 
 // ISR prototypes
 static void IRAM_ATTR Timer_1Hz_ISR();
@@ -118,11 +119,8 @@ void setup()
   timerAlarm(Timer_30Hz, 1000000, true, 0);
 
   // Setup if ESP32 is hosting a network
-  if(hostNetwork)
-  {
-    pNetworking = new Networking();  // Init object
-    pNetworking->pushSerialData("Network Initialized!\n");
-  }
+  pNetworking = new Networking();  // Init object
+  pNetworking->pushSerialData("Network Initialized!\n");
 
   // Setup Sonar sensors if connected
   if(useSonar)
@@ -167,10 +165,14 @@ void setup()
   if(useWheels)
   {
     pWheelL = new Wheel(LWMPF, LWMPR);  // Init object
-    pNetworking->pushSerialData("Left Wheek: " + pWheelL->printPins());
+    pNetworking->pushSerialData("Left Wheel: " + pWheelL->printPins());
     pWheelR = new Wheel(RWMPF, RWMPR);  // Init object
     pNetworking->pushSerialData("Right Wheel: " + pWheelR->printPins());
     pNetworking->pushSerialData("Wheels Initialized!\n"); // Print confirmation
+
+    // Start wheels
+    pWheelL->startWheel(1000, 'F');
+    pWheelR->startWheel(1000, 'F');
   }
 }
 
@@ -181,29 +183,32 @@ bool Timer_30HZ_FG = false;
 
 // Main loop
 void loop()
-{    
-  // 1 HZ ISR
-  if(Timer_1HZ_FG)
+{ 
+  // 30 HZ ISR
+  if(Timer_30HZ_FG)
   {
-    digitalWrite(LED, digitalRead(LED) ^ 1);  // Heartbeat
     Update_Data(); // Update Sensor Data
-    Send_Sensor_Data(); // Push Serial Data
-    Timer_1HZ_FG = false;
+    braking_demo();
+
+    Timer_30HZ_FG = false;
   }
 
   // 10 HZ ISR
   if(Timer_10HZ_FG)
   {
+    // Reset ISR
     Timer_10HZ_FG = false;
-  }  
-  
-  // 30 HZ ISR
-  if(Timer_30HZ_FG)
-  {
-    Timer_30HZ_FG = false;
   }
 
+
+  // 1 HZ ISR
+  if(Timer_1HZ_FG)
+  {
+    Send_Sensor_Data(); // Push Serial Data
+    Timer_1HZ_FG = false;
+  }
 }
+
 
 // ISR's
 // Every 1 second (1 FPS)
@@ -221,7 +226,55 @@ static void IRAM_ATTR Timer_10Hz_ISR()
 // Ever 33 msec (30 FPS)
 static void IRAM_ATTR Timer_30Hz_ISR()
 {
-    Timer_30HZ_FG = true;
+  Timer_30HZ_FG = true;
+}
+
+void Sample_Sonar_Avoidance()
+{
+  if(pS2->distance < 100 || pS3->distance < 100)
+  {
+    pNetworking->pushSerialData("Object within 1 meter!\n");
+    if(pS2->distance > pS3->distance)
+    {
+      pNetworking->pushSerialData("Veering Left!\n");
+      pulseHaptic(3, 'R');
+      veer(45.0, 'L');
+    }
+    else
+    {
+      pNetworking->pushSerialData("Veering Right!\n");
+      pulseHaptic(3, 'L');     
+      veer(45.0, 'R');
+    }
+  }
+}
+
+void Sample_Haptic_Buzz()
+{
+      if (pS1->distance < 50)
+    {
+      pHapticL->startHaptic(3);
+      delay(500);
+    }
+    pHapticL->stopHaptic();
+    if (pS4->distance < 50)
+    {
+      pHapticR->startHaptic(3);
+      delay(500);
+    }
+    pHapticR->stopHaptic();
+    if (pS2->distance > 300 && pS2->distance < 500)
+    {
+      pHapticL->startHaptic(3);
+      delay(500);
+    }
+    pHapticL->stopHaptic();
+    if (pS3->distance > 300 && pS3->distance < 500)
+    {
+      pHapticR->startHaptic(3);
+      delay(500);
+    }
+    pHapticR->stopHaptic();
 }
 
 // Update Sensor Data
@@ -230,22 +283,22 @@ void Update_Data()
     // Update Sonar Distances
     if (useSonar)
     {
-        pS1->readDistance();
-        pS2->readDistance();
-        pS3->readDistance();
-        pS4->readDistance();
+      pS1->updateDistance();
+      pS2->updateDistance();
+      pS3->updateDistance();
+      pS4->updateDistance();
     }
 
     // Update LiDAR Distances
     if (useLidar)
     {
-        pLidar->readDistance();
+      pLidar->updateDistance();
     }
 
     // Update IMU readings
     if (useImu)
     {
-        pIMU->updateData();
+      pIMU->updateData();
     }
 }
 
@@ -296,52 +349,140 @@ void Send_Sensor_Data()
   pNetworking->update();
 }
 
-// Run full system test and upload data to http://192.168.4.1/
-void Test_System()
+void veer(float aspect, char direction)
 {
-  if(useCV && useHaptics && useImu && useLidar && useSonar && useWheels)
+  // Stop Wheels
+  pWheelL->stopWheel();
+  pWheelR->stopWheel();
+
+  // Pivot
+  pivot(aspect, direction);
+
+  // Move forward till object is out of way
+  switch (direction)
   {
-    Send_Sensor_Data();
-    Serial.println("Running Wheels!");
-    pWheelL->startWheel(500, true);
-    pWheelR->startWheel(500, true);
-    Serial.println("Running Haptics!");
-    pHapticL->startHaptic(3);
-    pHapticR->startHaptic(3);
-    delay(3000);
+    // Start Wheels
+    pWheelL->startWheel(350, 'F');
+    pWheelR->startWheel(350, 'F');
+
+    // Wait for appropriate sensor to be no longer close range
+    case 'L':
+      while(pS3->distance < 100) { pS3->updateDistance(); }
+      break;
+    case 'R':
+      while(pS2->distance < 100) { pS2->updateDistance(); }
+      break;
+    default:
+      pNetworking->pushSerialData("Invalid Veer Direction!");
+      break;
+
+    // Stop wheels
     pWheelL->stopWheel();
     pWheelR->stopWheel();
+  }
+
+  // Pivot back
+  aspect = -aspect;
+  if (direction == 'L') direction == 'R';
+  else direction == 'L';
+  pivot(aspect, direction);
+
+  // Retart wheels
+  pWheelL->startWheel(350, 'F');
+  pWheelR->startWheel(350, 'F');
+}
+
+// Routine to stop and pivot the walker by [aspect] degrees
+void pivot(float aspect, char direction)
+{
+  float initAngle = pIMU->yaw;
+  float deltaAngle = 0.0;
+
+  // Pivot Walker 
+  if (direction == 'L')
+  {
+    pWheelR->startWheel(350, 'F');
+    while(fabs(deltaAngle) < aspect)
+    { 
+      pIMU->updateData();
+      deltaAngle = fmod((initAngle - pIMU->yaw) + 180.0, 360.0) - 180.0;
+    } 
+    pWheelR->stopWheel();
+  }
+  else
+  {
+    pWheelL->startWheel(350, 'F');
+    while(fabs(deltaAngle) < aspect)
+    { 
+      pIMU->updateData();
+      deltaAngle = fmod((initAngle - pIMU->yaw) + 180.0, 360.0) - 180.0;
+    } 
+    pWheelL->stopWheel();
+  }
+}
+
+// Haptic pulse patterns
+void pulseHaptic(int urgency, char direction)
+{
+  int delayTime; 
+
+  // Determine freq to buzz haptic
+  switch (urgency)
+  {
+    case 1:
+      delayTime = 500;
+      break;
+    case 2:
+      delayTime = 250;
+      break;    
+    case 3:
+      delayTime = 100;
+      break;
+    default:
+      Serial.println("Invalid pulse code.");
+  }
+
+  // Buzz appropritate side
+  if (direction == 'L')
+  {
+    pHapticL->startHaptic(urgency);
+    delay(delayTime);
     pHapticL->stopHaptic();
+    pHapticL->startHaptic(urgency);
+    delay(delayTime);
+    pHapticL->stopHaptic();
+    pHapticL->startHaptic(urgency);
+    delay(delayTime);
+    pHapticL->stopHaptic();
+  }
+  else
+  {
+    pHapticR->startHaptic(urgency);
+    delay(delayTime);
+    pHapticR->stopHaptic();
+    pHapticR->startHaptic(urgency);
+    delay(delayTime);
+    pHapticR->stopHaptic();
+    pHapticR->startHaptic(urgency);
+    delay(delayTime);
     pHapticR->stopHaptic();
   }
 }
 
-void Sample_GNC_Alg()
+// braking function
+void braking_demo()
 {
-  if(useCV && useHaptics && useImu && useLidar && useSonar && useWheels)
+  if(pS2->distance <= 100 || pS3->distance <= 100)
   {
-    // Example avoidance of object in front
-    if(!pWheelL->spinning) pWheelL->startWheel(350, true);
-    if(!pWheelR->spinning) pWheelR->startWheel(350, true);
-
-    if (pS2->distance < 50 || pS3->distance < 50)
-    {
-      pWheelL->startWheel(350, false);
-      pWheelR->startWheel(350, false);
-      pHapticL->startHaptic(3);
-      pHapticR->startHaptic(3);
-      delay(1000);
-      pWheelL->stopWheel();
-      pWheelR->stopWheel(); 
-      delay(2000);
-      pWheelL->startWheel(350, true);
-      pWheelR->startWheel(350, false);
-      delay(8000);
-      pHapticL->stopHaptic();
-      pHapticR->stopHaptic();
-      pWheelL->stopWheel();
-      pWheelR->stopWheel();
-    }
+    Serial.println("Coming to a stop.");
+    pWheelL->stopWheel();
+    pWheelR->stopWheel();
+    delay(250);
+    pWheelR->startWheel(500, 'R');
+    pWheelL->startWheel(500, 'R');
+    delay(250);
+    pWheelL->stopWheel();
+    pWheelR->stopWheel();
   }
 }
 

@@ -19,7 +19,7 @@ void Lidar::setup()
 }
 
 // Simplified function to read LiDAR distance over I2C
-void Lidar::readDistance()
+void Lidar::updateDistance()
 {
     Wire.beginTransmission(TFLUNA_I2C_ADDR); // Open data line
     Wire.write(0x00);                        // Request distance data

@@ -12,7 +12,7 @@ public:
     Lidar();      // Clas constructor
     void setup(); // Setup function
     int distance; // Stores latest distance
-    void readDistance();
+    void updateDistance();
 
 };
 
