@@ -83,6 +83,7 @@ void Test_System();
 void Send_Sensor_Data();
 void veer(float aspect, bool left);
 void pulseHaptic(int urgency, bool left);
+void braking_demo();
 
 // ISR prototypes
 static void IRAM_ATTR Timer_1Hz_ISR();
@@ -219,7 +220,6 @@ void loop()
   }
 
 }
-
 
 // ISR's
 // Every 1 second (1 FPS)
@@ -382,6 +382,28 @@ void veer(float aspect, bool left)
     pWheelL->stopWheel();
   }
 }
+
+// braking function
+void braking_demo()
+{
+  pWheelR->startWheel(1023, true);
+  pWheelL->startWheel(1023, true);
+
+  if(pLidar->distance <= 300 || pS2->distance <= 300 || pS3->distance <= 300)
+  {
+    Serial.println("Coming to a stop.");
+    pWheelL->stopWheel();
+    pWheelR->stopWheel();
+    delay(500);
+    pWheelR->startWheel(500, false);
+    pWheelL->startWheel(500, false);
+    delay(500);
+    pWheelL->stopWheel();
+    pWheelR->stopWheel();
+    delay(1000);
+  }
+  else{}
+ }
 
 // haptic pulse patterns
 // urgency determined by range and by amount of obstacles

@@ -44,6 +44,7 @@ void Wheel::stopWheel()
     this->spinning = false;
     this->direction = 0;
     this->curSpeed = 0;
+    // if walker doesn't stop in time, we can try spinning both wheels in reverse for a short time, then coming to a full brake.
 }
 
 // Print to serial the current pinouts
