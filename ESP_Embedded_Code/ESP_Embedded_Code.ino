@@ -39,11 +39,11 @@
 #define RWMPR 18  // Right Wheel motor pin 2
 
 // Boolean flags
-bool useCV = true; // Set to use computer vision
+bool useCV = false; // Set to use computer vision
 bool useSonar = true; // Set to use sonar functions
 bool useLidar = false; // Set to use LiDAR functions
-bool useImu = true; // Set to use IMU
-bool useHaptics = true; // Set to use Haptics
+bool useImu = false; // Set to use IMU
+bool useHaptics = false; // Set to use Haptics
 bool useWheels = true; // Set to use Wheels
 
 // Network Object
@@ -79,6 +79,7 @@ void Update_Data();
 void Send_Sensor_Data();
 void Sample_Haptic_Buzz();
 void Sample_Sonar_Avoidance();
+void braking_demo();
 void veer(float aspect, char direction);
 void pivot(float aspect, char direction);
 void pulseHaptic(int urgency, char direction);
@@ -166,8 +167,8 @@ void setup()
     pNetworking->pushSerialData("Wheels Initialized!\n"); // Print confirmation
 
     // Start wheels
-    pWheelL->startWheel(350, 'F');
-    pWheelR->startWheel(350, 'F');
+    pWheelL->startWheel(1000, 'F');
+    pWheelR->startWheel(1000, 'F');
   }
 }
 
@@ -182,6 +183,8 @@ void loop()
   // 30 HZ ISR
   if(Timer_30HZ_FG)
   {
+    Update_Data(); // Update Sensor Data
+    braking_demo();
 
     Timer_30HZ_FG = false;
   }
@@ -189,10 +192,6 @@ void loop()
   // 10 HZ ISR
   if(Timer_10HZ_FG)
   {
-    Update_Data(); // Update Sensor Data
-
-
-
     // Reset ISR
     Timer_10HZ_FG = false;
   }
@@ -201,7 +200,6 @@ void loop()
   // 1 HZ ISR
   if(Timer_1HZ_FG)
   {
-
     Send_Sensor_Data(); // Push Serial Data
     Timer_1HZ_FG = false;
   }
@@ -466,3 +464,21 @@ void pulseHaptic(int urgency, char direction)
     pHapticR->stopHaptic();
   }
 }
+
+// braking function
+void braking_demo()
+{
+  if(pS2->distance <= 100 || pS3->distance <= 100)
+  {
+    Serial.println("Coming to a stop.");
+    pWheelL->stopWheel();
+    pWheelR->stopWheel();
+    delay(250);
+    pWheelR->startWheel(500, 'R');
+    pWheelL->startWheel(500, 'R');
+    delay(250);
+    pWheelL->stopWheel();
+    pWheelR->stopWheel();
+  }
+}
+
