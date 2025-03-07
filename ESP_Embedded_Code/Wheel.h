@@ -12,11 +12,11 @@ private:
 
 public:
     Wheel(int motorPinForward, int motorPinReverse);
-    void setup();                             // Setup function
+    void setup();                               // Setup function
     void startWheel(int speed, char direction); // Start the haptic motor
-    void stopWheel();                         // Stop the haptic motor
+    void stopWheel();                           // Stop the haptic motor
     String printPins();                         // Print pin out
-
+    
     // State Variables
     bool spinning;
     int curDirection; // -1 is resverse, 0 it not moving, 1 is forward

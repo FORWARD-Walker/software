@@ -39,5 +39,5 @@ long Sonar::readSonarDuration()
 // Print to serial the current pinouts
 String Sonar::printPins()
 {
-  return String("Trigger Pin: ") + this->trigPin + String(" Echo Pin: ") + this->echoPin + "\n";
+    return String("Trigger Pin: ") + this->trigPin + String(" Echo Pin: ") + this->echoPin + "\n";
 }

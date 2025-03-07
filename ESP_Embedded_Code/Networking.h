@@ -22,7 +22,6 @@ public:
     void pushSerialData(String data);
     void handleRoot();
     void update();
-
 };
 
 #endif

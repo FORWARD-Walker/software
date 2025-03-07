@@ -14,9 +14,9 @@ private:
 public:
     Sonar(int trigPin, int echoPin); // Clas constructor
     void setup();                    // Setup function
-    void updateDistance();             // Get reading function
+    void updateDistance();           // Get reading function
     long distance;                   // distance in cm
-    String printPins();                // Print to serial the current pinouts
+    String printPins();              // Print to serial the current pinouts
 };
 
 #endif

@@ -41,12 +41,12 @@ void Imu::updateData()
     this->accz = linearAccel.z(); // z accel
 
     // velocity is accumulation of acceleration over operation frequency timestep
-    this->velx += accx * 1/30;
-    this->vely += accy * 1/30;
-    this->velz += accz * 1/30;
+    this->velx += accx * 1 / 30;
+    this->vely += accy * 1 / 30;
+    this->velz += accz * 1 / 30;
 
     // position is accumulation of velocity
-    this->posx += velx * 1/30;
-    this->posy += vely * 1/30;
-    this->posz += velz * 1/30;
+    this->posx += velx * 1 / 30;
+    this->posy += vely * 1 / 30;
+    this->posz += velz * 1 / 30;
 }

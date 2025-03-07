@@ -23,6 +23,12 @@ public:
     float accx;
     float accy;
     float accz;
+    float velx;
+    float vely;
+    float velz;
+    float posx;
+    float posy;
+    float posz;
 };
 
 #endif

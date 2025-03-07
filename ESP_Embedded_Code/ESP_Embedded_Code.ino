@@ -7,90 +7,73 @@
 
 // # Include
 #include <Wire.h> // I2C
-#include "Sonar.h"
-#include "Lidar.h"
-#include "Imu.h"
 #include "Networking.h"
-#include "Haptic.h"
-#include "Wheel.h"
-
-// Sonar Pins
-#define TRIG1 25  // Trigger pin for sensor 1
-#define ECHO1 34  // Echo pin for sensor 1
-#define TRIG2 26  // Trigger pin for sensor 2
-#define ECHO2 35  // Echo pin for sensor 2
-#define TRIG3 22  // Trigger pin for sensor 3
-#define ECHO3 23  // Echo pin for sensor 3
-#define TRIG4 19  // Trigger pin for sensor 4
-#define ECHO4 21  // Echo pin for sensor 4
-
-// Haptic pins
-#define LHMP1 12  // Left Haptic motor pin 1
-#define LHMP2 13  // Left Haptic motor pin 2
-#define LHME  27  // Left Haptic motor enable pin
-#define RHMP1 15  // Right Haptic motor pin 1
-#define RHMP2 2  // Right Haptic motor pin 2
-#define RHME  14   // Right Haptic motor enable pin
-
-// Wheel Pins
-#define LWMPF 16  // Left Wheel motor pin 1
-#define LWMPR 17  // Left Wheel motor pin 2
-#define RWMPF 5  // Right Wheel motor pin 1
-#define RWMPR 18  // Right Wheel motor pin 2
+#include "utils.cpp"
+#include "Navigation.h"
+#include "Walker.h"
+#include "Pins.h"
 
 // Boolean flags
 bool useCV = false; // Set to use computer vision
-bool useSonar = true; // Set to use sonar functions
-bool useLidar = false; // Set to use LiDAR functions
+bool useSonar = false; // Set to use sonar functions
 bool useImu = false; // Set to use IMU
 bool useHaptics = false; // Set to use Haptics
-bool useWheels = true; // Set to use Wheels
+bool useWheels = false; // Set to use Wheels
 
-// Network Object
-Networking* pNetworking = NULL;
+struct Sensor_Data_Struct
+{
+  // Sonar Data
+  long S1_Distance = 0;
+  long S2_Distance = 0;
+  long S3_Distance = 0;
+  long S4_Distance = 0;
 
-// Utils
-utils* utils;
+  // IMU Data
+  float yaw = 0.0;
+  float pitch = 0.;
+  float roll = 0.0; 
+  float accx = 0.0;
+  float accy = 0.0;
+  float accz = 0.0;
+  float velx = 0.0;
+  float vely = 0.0;
+  float velz = 0.0;
+  float posx = 0.0;
+  float posy = 0.0;
+  float posz = 0.0;
 
-// Sensor Objects
-Sonar* pS1 = NULL;
-Sonar* pS2 = NULL;
-Sonar* pS3 = NULL;
-Sonar* pS4 = NULL;
+  // Camera Data
+  char camData[512]; 
 
-// IMU Object
-Imu* pIMU = NULL;
+} Sensor_Data;
 
-// LiDAR Object
-Lidar* pLidar = NULL;
+// Walker structure
+Walker* pWalker = nullptr;
 
-// Haptic Objects
-Haptic* pHapticL = NULL;
-Haptic* pHapticR = NULL;
+// Network Ref
+Networking* pNetworking = nullptr;
 
-// Wheel Objects
-Wheel* pWheelL = NULL;
-Wheel* pWheelR = NULL;
+// Navigation Ref
+Navigation* pNavigation = nullptr;
 
 // Timer Objects
-hw_timer_t *Timer_1Hz = NULL;
-hw_timer_t *Timer_10Hz = NULL;
-hw_timer_t *Timer_30Hz = NULL;
+hw_timer_t *Timer_1Hz = nullptr;
+hw_timer_t *Timer_10Hz = nullptr;
+hw_timer_t *Timer_30Hz = nullptr;
 
 // Helper Function Prototypes
 void Update_Data();
 void Send_Sensor_Data();
-void Sample_Haptic_Buzz();
-void Sample_Sonar_Avoidance();
-void braking_demo();
-void veer(float aspect, char direction);
-void pivot(float aspect, char direction);
-void pulseHaptic(int urgency, char direction);
 
 // ISR prototypes
 static void IRAM_ATTR Timer_1Hz_ISR();
 static void IRAM_ATTR Timer_10Hz_ISR();
 static void IRAM_ATTR Timer_30Hz_ISR();
+
+// Boolean ISR Flags
+bool Timer_1HZ_FG = false;
+bool Timer_10HZ_FG = false;
+bool Timer_30HZ_FG = false;
 
 // Setup Code
 void setup()
@@ -99,7 +82,7 @@ void setup()
   Serial.begin(115200); // Init Serial
 
   // Set up I2C
-  Wire.begin(32,33);
+  Wire.begin(SDA, SCL);
 
   // Setup heartbeat
   pinMode(LED, OUTPUT); // Set up LED as output
@@ -121,68 +104,18 @@ void setup()
   timerAttachInterrupt(Timer_30Hz, &Timer_30Hz_ISR);
   timerAlarm(Timer_30Hz, 1000000, true, 0);
 
-  // Setup if ESP32 is hosting a network
+  // Setup ESP32 network
   pNetworking = new Networking();  // Init object
   pNetworking->pushSerialData("Network Initialized!\n");
 
-  // Setup Sonar sensors if connected
-  if(useSonar)
-  {
-    // Initizalize the Sonar objects
-    pS1 = new Sonar(TRIG1, ECHO1);
-    pNetworking->pushSerialData("S1: " + pS1->printPins());
-    pS2 = new Sonar(TRIG2, ECHO2);
-    pNetworking->pushSerialData("S2: " + pS2->printPins());
-    pS3 = new Sonar(TRIG3, ECHO3);
-    pNetworking->pushSerialData("S3: " + pS3->printPins());
-    pS4 = new Sonar(TRIG4, ECHO4);
-    pNetworking->pushSerialData("S4: " + pS4->printPins());
-    pNetworking->pushSerialData("Sonar Initialized!\n"); // Print confirmation
-  }
+  // Init Walker
+  pWalker = new Walker(useSonar, useImu, useHaptics, useWheels);
+  pNetworking->pushSerialData("Walker Initialized!\n");
 
-  // Initizalize the LiDAR object
-  if(useLidar)
-  {
-    pLidar = new Lidar();  // Init object
-    pNetworking->pushSerialData("LiDAR Initialized!\n");
-  }
-
-  // Intialize IMU object
-  if(useImu)
-  {
-    pIMU = new Imu(); // Init object
-    pNetworking->pushSerialData("IMU Initialized!\n"); // Print confirmation
-  }
-
-  // Initialize Haptics Objects
-  if(useHaptics)
-  {
-    pHapticL = new Haptic(LHMP1, LHMP2, LHME);  // Init object
-    pNetworking->pushSerialData("Left Haptic: " + pHapticL->printPins());
-    pHapticR = new Haptic(RHMP1, RHMP2, RHME);  // Init object
-    pNetworking->pushSerialData("Right Haptic: " + pHapticR->printPins());
-    pNetworking->pushSerialData("Haptics Initialized!\n"); // Print confirmation
-  }
-
-  // Initialize Wheel Objects
-  if(useWheels)
-  {
-    pWheelL = new Wheel(LWMPF, LWMPR);  // Init object
-    pNetworking->pushSerialData("Left Wheel: " + pWheelL->printPins());
-    pWheelR = new Wheel(RWMPF, RWMPR);  // Init object
-    pNetworking->pushSerialData("Right Wheel: " + pWheelR->printPins());
-    pNetworking->pushSerialData("Wheels Initialized!\n"); // Print confirmation
-
-    // Start wheels
-    pWheelL->startWheel(1000, 'F');
-    pWheelR->startWheel(1000, 'F');
-  }
+  // Init Navigation
+  pNavigation = new Navigation(pWalker);
+  pNetworking->pushSerialData("Navigation Initialized!\n");
 }
-
-// Boolean Processing Flags
-bool Timer_1HZ_FG = false;
-bool Timer_10HZ_FG = false;
-bool Timer_30HZ_FG = false;
 
 // Main loop
 void loop()
@@ -191,7 +124,6 @@ void loop()
   if(Timer_30HZ_FG)
   {
     Update_Data(); // Update Sensor Data
-    braking_demo();
 
     Timer_30HZ_FG = false;
   }
@@ -199,10 +131,11 @@ void loop()
   // 10 HZ ISR
   if(Timer_10HZ_FG)
   {
+    pNavigation->Sample_Sonar_Avoidance();
+
     // Reset ISR
     Timer_10HZ_FG = false;
   }
-
 
   // 1 HZ ISR
   if(Timer_1HZ_FG)
@@ -212,72 +145,20 @@ void loop()
   }
 }
 
-
-// ISR's
-// Every 1 second (1 FPS)
+// ISRs
 static void IRAM_ATTR Timer_1Hz_ISR()
 {
   Timer_1HZ_FG = true;
 }
 
-// Every 100 msec (10 FPS)
 static void IRAM_ATTR Timer_10Hz_ISR()
 {
   Timer_10HZ_FG = true;
 }
 
-// Ever 33 msec (30 FPS)
 static void IRAM_ATTR Timer_30Hz_ISR()
 {
   Timer_30HZ_FG = true;
-}
-
-void Sample_Sonar_Avoidance()
-{
-  if(pS2->distance < 100 || pS3->distance < 100)
-  {
-    pNetworking->pushSerialData("Object within 1 meter!\n");
-    if(pS2->distance > pS3->distance)
-    {
-      pNetworking->pushSerialData("Veering Left!\n");
-      pulseHaptic(3, 'R');
-      veer(45.0, 'L');
-    }
-    else
-    {
-      pNetworking->pushSerialData("Veering Right!\n");
-      pulseHaptic(3, 'L');     
-      veer(45.0, 'R');
-    }
-  }
-}
-
-void Sample_Haptic_Buzz()
-{
-      if (pS1->distance < 50)
-    {
-      pHapticL->startHaptic(3);
-      delay(500);
-    }
-    pHapticL->stopHaptic();
-    if (pS4->distance < 50)
-    {
-      pHapticR->startHaptic(3);
-      delay(500);
-    }
-    pHapticR->stopHaptic();
-    if (pS2->distance > 300 && pS2->distance < 500)
-    {
-      pHapticL->startHaptic(3);
-      delay(500);
-    }
-    pHapticL->stopHaptic();
-    if (pS3->distance > 300 && pS3->distance < 500)
-    {
-      pHapticR->startHaptic(3);
-      delay(500);
-    }
-    pHapticR->stopHaptic();
 }
 
 // Update Sensor Data
@@ -286,22 +167,38 @@ void Update_Data()
     // Update Sonar Distances
     if (useSonar)
     {
-      pS1->updateDistance();
-      pS2->updateDistance();
-      pS3->updateDistance();
-      pS4->updateDistance();
-    }
-
-    // Update LiDAR Distances
-    if (useLidar)
-    {
-      pLidar->updateDistance();
+      pWalker->pS1->updateDistance();
+      Sensor_Data.S1_Distance = pWalker->pS1->distance;
+      pWalker->pS2->updateDistance();
+      Sensor_Data.S2_Distance = pWalker->pS2->distance;
+      pWalker->pS3->updateDistance();
+      Sensor_Data.S3_Distance = pWalker->pS3->distance;
+      pWalker->pS4->updateDistance();
+      Sensor_Data.S4_Distance = pWalker->pS4->distance;
     }
 
     // Update IMU readings
     if (useImu)
     {
-      pIMU->updateData();
+      pWalker->pIMU->updateData();
+      Sensor_Data.yaw = pWalker->pIMU->yaw;
+      Sensor_Data.pitch = pWalker->pIMU->pitch;
+      Sensor_Data.roll = pWalker->pIMU->roll;
+      Sensor_Data.accx = pWalker->pIMU->accx;
+      Sensor_Data.accy = pWalker->pIMU->accy;
+      Sensor_Data.accz = pWalker->pIMU->accz;
+      Sensor_Data.velx = pWalker->pIMU->velx;
+      Sensor_Data.vely = pWalker->pIMU->vely;
+      Sensor_Data.velz = pWalker->pIMU->velz;
+      Sensor_Data.posx = pWalker->pIMU->posx;
+      Sensor_Data.posy = pWalker->pIMU->posy;
+      Sensor_Data.posz = pWalker->pIMU->posz;
+    }
+
+    // Update Camera Data
+    if(useCV)
+    {
+      pNetworking->getUDPPacket(Sensor_Data.camData, sizeof(Sensor_Data.camData));
     }
 }
 
@@ -313,179 +210,53 @@ void Send_Sensor_Data()
   if(useSonar)
   {
     sensorData = "S1: ";
-    sensorData += pS1->distance;
+    sensorData += Sensor_Data.S1_Distance;
     sensorData += " S2: ";
-    sensorData += pS2->distance;
+    sensorData += Sensor_Data.S2_Distance;
     sensorData += " S3: ";
-    sensorData += pS3->distance;
+    sensorData += Sensor_Data.S3_Distance;
     sensorData += " S4: ";
-    sensorData += pS4->distance;
-    sensorData += '\n';
-  }
-
-  if(useLidar)
-  {
-    sensorData += "LiDAR: ";
-    sensorData += pLidar->distance;
+    sensorData += Sensor_Data.S4_Distance;
     sensorData += '\n';
   }
 
   if(useImu)
   {
-    sensorData += "Roll: ";
-    sensorData += pIMU->roll;
+    sensorData += "Yaw: ";
+    sensorData += Sensor_Data.yaw;
     sensorData += " Pitch: ";
-    sensorData += pIMU->pitch;
-    sensorData += " Yaw: ";
-    sensorData += pIMU->yaw;
+    sensorData += Sensor_Data.pitch;
+    sensorData += " Roll: ";
+    sensorData += Sensor_Data.roll;
+    sensorData += '\n';
+    sensorData += "Accx: ";
+    sensorData += Sensor_Data.accx;
+    sensorData += " Accy: ";
+    sensorData += Sensor_Data.accy;
+    sensorData += " Accz: ";
+    sensorData += Sensor_Data.accz;
+    sensorData += '\n';
+    sensorData += "Velx: ";
+    sensorData += Sensor_Data.velx;
+    sensorData += " Vely: ";
+    sensorData += Sensor_Data.vely;
+    sensorData += " Velz: ";
+    sensorData += Sensor_Data.velz;
+    sensorData += '\n';
+    sensorData += "Posx: ";
+    sensorData += Sensor_Data.posx;
+    sensorData += " Posy: ";
+    sensorData += Sensor_Data.posy;
+    sensorData += " Posz: ";
+    sensorData += Sensor_Data.posz;
     sensorData += '\n';
   }
 
   if(useCV)
   {
-    char data[512];
-    pNetworking->getUDPPacket(data, sizeof(data));
-    sensorData += data;
+    sensorData += Sensor_Data.camData;
   }
 
   pNetworking->pushSerialData(sensorData);
   pNetworking->update();
 }
-
-void veer(float aspect, char direction)
-{
-  // Stop Wheels
-  pWheelL->stopWheel();
-  pWheelR->stopWheel();
-
-  // Pivot
-  pivot(aspect, direction);
-
-  // Move forward till object is out of way
-  switch (direction)
-  {
-    // Start Wheels
-    pWheelL->startWheel(350, 'F');
-    pWheelR->startWheel(350, 'F');
-
-    // Wait for appropriate sensor to be no longer close range
-    case 'L':
-      while(pS3->distance < 100) { pS3->updateDistance(); }
-      break;
-    case 'R':
-      while(pS2->distance < 100) { pS2->updateDistance(); }
-      break;
-    default:
-      pNetworking->pushSerialData("Invalid Veer Direction!");
-      break;
-
-    // Stop wheels
-    pWheelL->stopWheel();
-    pWheelR->stopWheel();
-  }
-
-  // Pivot back
-  aspect = -aspect;
-  if (direction == 'L') direction == 'R';
-  else direction == 'L';
-  pivot(aspect, direction);
-
-  // Retart wheels
-  pWheelL->startWheel(350, 'F');
-  pWheelR->startWheel(350, 'F');
-}
-
-// Routine to stop and pivot the walker by [aspect] degrees
-void pivot(float aspect, char direction)
-{
-  float initAngle = pIMU->yaw;
-  float deltaAngle = 0.0;
-
-  // Pivot Walker 
-  if (direction == 'L')
-  {
-    pWheelR->startWheel(350, 'F');
-    while(fabs(deltaAngle) < aspect)
-    { 
-      pIMU->updateData();
-      deltaAngle = fmod((initAngle - pIMU->yaw) + 180.0, 360.0) - 180.0;
-    } 
-    pWheelR->stopWheel();
-  }
-  else
-  {
-    pWheelL->startWheel(350, 'F');
-    while(fabs(deltaAngle) < aspect)
-    { 
-      pIMU->updateData();
-      deltaAngle = fmod((initAngle - pIMU->yaw) + 180.0, 360.0) - 180.0;
-    } 
-    pWheelL->stopWheel();
-  }
-}
-
-// Haptic pulse patterns
-void pulseHaptic(int urgency, char direction)
-{
-  int delayTime; 
-
-  // Determine freq to buzz haptic
-  switch (urgency)
-  {
-    case 1:
-      delayTime = 500;
-      break;
-    case 2:
-      delayTime = 250;
-      break;    
-    case 3:
-      delayTime = 100;
-      break;
-    default:
-      Serial.println("Invalid pulse code.");
-  }
-
-  // Buzz appropritate side
-  if (direction == 'L')
-  {
-    pHapticL->startHaptic(urgency);
-    delay(delayTime);
-    pHapticL->stopHaptic();
-    pHapticL->startHaptic(urgency);
-    delay(delayTime);
-    pHapticL->stopHaptic();
-    pHapticL->startHaptic(urgency);
-    delay(delayTime);
-    pHapticL->stopHaptic();
-  }
-  else
-  {
-    pHapticR->startHaptic(urgency);
-    delay(delayTime);
-    pHapticR->stopHaptic();
-    pHapticR->startHaptic(urgency);
-    delay(delayTime);
-    pHapticR->stopHaptic();
-    pHapticR->startHaptic(urgency);
-    delay(delayTime);
-    pHapticR->stopHaptic();
-  }
-}
-
-// braking function
-void braking_demo()
-{
-  if(pS2->distance <= 100 || pS3->distance <= 100)
-  {
-    Serial.println("Coming to a stop.");
-    pWheelL->stopWheel();
-    pWheelR->stopWheel();
-    delay(250);
-    pWheelR->startWheel(500, 'R');
-    pWheelL->startWheel(500, 'R');
-    delay(250);
-    pWheelL->stopWheel();
-    pWheelR->stopWheel();
-  }
-}
-

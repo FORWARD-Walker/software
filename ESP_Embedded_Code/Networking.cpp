@@ -71,5 +71,3 @@ void Networking::update()
 {
     server.handleClient();
 }
-
-
