@@ -7,7 +7,7 @@ Wheel::Wheel(int motorPinForward, int motorPinReverse)
     this->motorPinReverse = motorPinReverse;
     this->setup();
     this->spinning = false;
-    this->direction = 0;
+    this->curDirection = 0;
     this->curSpeed = 0;
 }
 
@@ -18,20 +18,20 @@ void Wheel::setup()
     pinMode(this->motorPinReverse, OUTPUT);
 }
 
-void Wheel::startWheel(int speed, bool forward)
+void Wheel::startWheel(int speed, char direction)
 {
     // If we want to go forward
-    if (forward)
+    if (direction == 'F')
     {
         analogWrite(this->motorPinForward, speed);
         analogWrite(this->motorPinReverse, LOW);
-        this->direction = 1;
+        this->curDirection = 1;
     }
     else
     {
         analogWrite(this->motorPinForward, LOW);
         analogWrite(this->motorPinReverse, speed);
-        this->direction = -1;
+        this->curDirection = -1;
     }
     this->spinning = true;
     this->curSpeed = speed;
@@ -42,7 +42,7 @@ void Wheel::stopWheel()
     analogWrite(this->motorPinForward, LOW);
     analogWrite(this->motorPinReverse, LOW);
     this->spinning = false;
-    this->direction = 0;
+    this->curDirection = 0;
     this->curSpeed = 0;
 }
 

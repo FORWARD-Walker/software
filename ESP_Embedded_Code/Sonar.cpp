@@ -17,7 +17,7 @@ void Sonar::setup()
 }
 
 // Get reading
-void Sonar::readDistance()
+void Sonar::updateDistance()
 {
     this->distance = (readSonarDuration() * 0.034326 / 2.0);
 }
