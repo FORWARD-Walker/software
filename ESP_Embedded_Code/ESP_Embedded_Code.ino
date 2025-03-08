@@ -14,11 +14,20 @@
 #include "Pins.h"
 
 // Boolean flags
-bool useCV = false; // Set to use computer vision
+bool useCV = true; // Set to use computer vision
 bool useSonar = false; // Set to use sonar functions
 bool useImu = false; // Set to use IMU
 bool useHaptics = false; // Set to use Haptics
 bool useWheels = false; // Set to use Wheels
+
+struct Camera_Data_Struct
+{
+  int x1 = 0;
+  int x2 = 0;
+  int y1 = 0;
+  int y2 = 0;
+  String name;
+};
 
 struct Sensor_Data_Struct
 {
@@ -30,7 +39,7 @@ struct Sensor_Data_Struct
 
   // IMU Data
   float yaw = 0.0;
-  float pitch = 0.;
+  float pitch = 0.0;
   float roll = 0.0; 
   float accx = 0.0;
   float accy = 0.0;
@@ -43,7 +52,8 @@ struct Sensor_Data_Struct
   float posz = 0.0;
 
   // Camera Data
-  char camData[512]; 
+  int objCount = 0;
+  std::vector<Camera_Data_Struct> objects;
 
 } Sensor_Data;
 
@@ -64,6 +74,7 @@ hw_timer_t *Timer_30Hz = nullptr;
 // Helper Function Prototypes
 void Update_Data();
 void Send_Sensor_Data();
+Sensor_Data_Struct parseCameraData(Sensor_Data_Struct Sensor_Data, String &input);
 
 // ISR prototypes
 static void IRAM_ATTR Timer_1Hz_ISR();
@@ -115,6 +126,9 @@ void setup()
   // Init Navigation
   pNavigation = new Navigation(pWalker);
   pNetworking->pushSerialData("Navigation Initialized!\n");
+
+  pWalker->pWheelL->startWheel(350, 'F');
+  pWalker->pWheelR->startWheel(350, 'F');
 }
 
 // Main loop
@@ -123,7 +137,6 @@ void loop()
   // 30 HZ ISR
   if(Timer_30HZ_FG)
   {
-    Update_Data(); // Update Sensor Data
 
     Timer_30HZ_FG = false;
   }
@@ -131,7 +144,7 @@ void loop()
   // 10 HZ ISR
   if(Timer_10HZ_FG)
   {
-    pNavigation->Sample_Sonar_Avoidance();
+    Update_Data(); // Update Sensor Data
 
     // Reset ISR
     Timer_10HZ_FG = false;
@@ -198,8 +211,79 @@ void Update_Data()
     // Update Camera Data
     if(useCV)
     {
-      pNetworking->getUDPPacket(Sensor_Data.camData, sizeof(Sensor_Data.camData));
+      char temp[1024];
+      pNetworking->getUDPPacket(temp, sizeof(temp));
+      String camDataStr = String(temp);
+      Sensor_Data = parseCameraData(Sensor_Data, camDataStr);
     }
+}
+
+Sensor_Data_Struct parseCameraData(Sensor_Data_Struct Sensor_Data, String &input)
+{
+  int pos = 0;
+  int newlineIndex = input.indexOf('\n', pos);
+  if (newlineIndex == -1) {
+    newlineIndex = input.length();
+  }
+  
+  // Parse the first line to extract the object count
+  String firstLine = input.substring(pos, newlineIndex);
+  int colonIndex = firstLine.indexOf(':');
+  if (colonIndex != -1) {
+    String countStr = firstLine.substring(colonIndex + 1);
+    countStr.trim();
+    Sensor_Data.objCount = countStr.toInt();
+  }
+  
+  // Process remaining lines for each object
+  pos = newlineIndex + 1;
+  while (pos < input.length()) {
+    newlineIndex = input.indexOf('\n', pos);
+    if (newlineIndex == -1) {
+      newlineIndex = input.length();
+    }
+    String line = input.substring(pos, newlineIndex);
+    line.trim();
+    
+    if (line.startsWith("Object:")) {
+      // Remove the "Object:" prefix
+      String data = line.substring(7);
+      data.trim();
+      
+      // Parse the object's name and coordinates using commas as delimiters
+      int firstComma = data.indexOf(',');
+      if (firstComma == -1) {
+        break;
+      }
+      
+      Camera_Data_Struct obj;
+      obj.name = data.substring(0, firstComma);
+      obj.name.trim();
+      
+      int posNum = firstComma + 1;
+      int comma = data.indexOf(',', posNum);
+      if (comma == -1) break;
+      obj.x1 = data.substring(posNum, comma).toInt();
+      
+      posNum = comma + 1;
+      comma = data.indexOf(',', posNum);
+      if (comma == -1) break;
+      obj.y1 = data.substring(posNum, comma).toInt();
+      
+      posNum = comma + 1;
+      comma = data.indexOf(',', posNum);
+      if (comma == -1) break;
+      obj.x2 = data.substring(posNum, comma).toInt();
+      
+      posNum = comma + 1;
+      obj.y2 = data.substring(posNum).toInt();
+      
+      Sensor_Data.objects.push_back(obj);
+    }
+    pos = newlineIndex + 1;
+  }
+
+  return Sensor_Data;
 }
 
 // send Sensor data to website
@@ -254,7 +338,21 @@ void Send_Sensor_Data()
 
   if(useCV)
   {
-    sensorData += Sensor_Data.camData;
+    for(int i = 0; i < Sensor_Data.objCount; i++)
+      {
+        sensorData += "Object: ";
+        sensorData += Sensor_Data.objects[i].name;
+        sensorData += " [x1: ";
+        sensorData += Sensor_Data.objects[i].x1;
+        sensorData += " x2: ";
+        sensorData += Sensor_Data.objects[i].x2;
+        sensorData += " y1: ";
+        sensorData += Sensor_Data.objects[i].y1;
+        sensorData += " y2: ";
+        sensorData += Sensor_Data.objects[i].y2;
+        sensorData += "]\n";
+
+      }
   }
 
   pNetworking->pushSerialData(sensorData);
