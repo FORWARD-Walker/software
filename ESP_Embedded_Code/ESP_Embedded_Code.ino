@@ -127,8 +127,8 @@ void setup()
   pNavigation = new Navigation(pWalker);
   pNetworking->pushSerialData("Navigation Initialized!\n");
 
-  pWalker->pWheelL->startWheel(350, 'F');
-  pWalker->pWheelR->startWheel(350, 'F');
+  //pWalker->pWheelL->startWheel(350, 'F');
+  //pWalker->pWheelR->startWheel(350, 'F');
 }
 
 // Main loop
@@ -145,6 +145,7 @@ void loop()
   if(Timer_10HZ_FG)
   {
     Update_Data(); // Update Sensor Data
+    //pNavigation->Sample_Sonar_Avoidance();
 
     // Reset ISR
     Timer_10HZ_FG = false;
@@ -220,6 +221,10 @@ void Update_Data()
 
 Sensor_Data_Struct parseCameraData(Sensor_Data_Struct Sensor_Data, String &input)
 {
+  // Reset Struct
+  Sensor_Data.objects.clear();
+  Sensor_Data.objCount = 0;
+
   int pos = 0;
   int newlineIndex = input.indexOf('\n', pos);
   if (newlineIndex == -1) {
@@ -268,12 +273,12 @@ Sensor_Data_Struct parseCameraData(Sensor_Data_Struct Sensor_Data, String &input
       posNum = comma + 1;
       comma = data.indexOf(',', posNum);
       if (comma == -1) break;
-      obj.y1 = data.substring(posNum, comma).toInt();
+      obj.x2 = data.substring(posNum, comma).toInt();
       
       posNum = comma + 1;
       comma = data.indexOf(',', posNum);
       if (comma == -1) break;
-      obj.x2 = data.substring(posNum, comma).toInt();
+      obj.y1 = data.substring(posNum, comma).toInt();
       
       posNum = comma + 1;
       obj.y2 = data.substring(posNum).toInt();
@@ -338,6 +343,9 @@ void Send_Sensor_Data()
 
   if(useCV)
   {
+    sensorData += "Object Count: ";
+    sensorData += Sensor_Data.objCount;
+    sensorData += "\n";
     for(int i = 0; i < Sensor_Data.objCount; i++)
       {
         sensorData += "Object: ";
