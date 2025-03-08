@@ -39,12 +39,12 @@
 #define RWMPR 18  // Right Wheel motor pin 2
 
 // Boolean flags
-bool useCV = false; // Set to use computer vision
-bool useSonar = true; // Set to use sonar functions
+bool useCV = true; // Set to use computer vision
+bool useSonar = false; // Set to use sonar functions
 bool useLidar = false; // Set to use LiDAR functions
 bool useImu = false; // Set to use IMU
 bool useHaptics = false; // Set to use Haptics
-bool useWheels = true; // Set to use Wheels
+bool useWheels = false; // Set to use Wheels
 
 // Network Object
 Networking* pNetworking = NULL;
@@ -180,29 +180,35 @@ bool Timer_30HZ_FG = false;
 // Main loop
 void loop()
 { 
-  // 30 HZ ISR
-  if(Timer_30HZ_FG)
+  // // 30 HZ ISR
+  // if(Timer_30HZ_FG)
+  // {
+  //   //Update_Data(); // Update Sensor Data
+  //   Timer_30HZ_FG = false;
+  // }
+
+  // // 10 HZ ISR
+  // if(Timer_10HZ_FG)
+  // {
+  //   // Reset ISR
+  //   Timer_10HZ_FG = false;
+  // }
+
+
+  // // 1 HZ ISR
+  // if(Timer_1HZ_FG)
+  // {
+  //   //Send_Sensor_Data(); // Push Serial Data
+  //   Timer_1HZ_FG = false;
+  // }
+  for( int i = 0; i < 10; i++ )
   {
-    Update_Data(); // Update Sensor Data
-    braking_demo();
-
-    Timer_30HZ_FG = false;
+    char data[1024];
+    pNetworking->getUDPPacket(data, sizeof(data));
+    Serial.println(data);
+    delay(33);
   }
-
-  // 10 HZ ISR
-  if(Timer_10HZ_FG)
-  {
-    // Reset ISR
-    Timer_10HZ_FG = false;
-  }
-
-
-  // 1 HZ ISR
-  if(Timer_1HZ_FG)
-  {
-    Send_Sensor_Data(); // Push Serial Data
-    Timer_1HZ_FG = false;
-  }
+  delay(10000);
 }
 
 
@@ -301,11 +307,11 @@ void Update_Data()
 // send Sensor data to website
 void Send_Sensor_Data()
 {
-  String sensorData;
+  String sensorData = "";
 
   if(useSonar)
   {
-    sensorData = "S1: ";
+    sensorData += "S1: ";
     sensorData += pS1->distance;
     sensorData += " S2: ";
     sensorData += pS2->distance;
@@ -336,9 +342,9 @@ void Send_Sensor_Data()
 
   if(useCV)
   {
-    char data[512];
+    char data[1024];
     pNetworking->getUDPPacket(data, sizeof(data));
-    sensorData += data;
+    Serial.println(data);
   }
 
   pNetworking->pushSerialData(sensorData);
