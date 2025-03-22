@@ -138,24 +138,21 @@ void loop()
   if(Timer_30HZ_FG)
   {
 
-    Timer_30HZ_FG = false;
+    Timer_30HZ_FG = false; // Reset ISR
   }
 
   // 10 HZ ISR
   if(Timer_10HZ_FG)
   {
     Update_Data(); // Update Sensor Data
-    pNavigation->Sample_Sonar_Avoidance();
-
-    // Reset ISR
-    Timer_10HZ_FG = false;
+    Timer_10HZ_FG = false; // Reset ISR
   }
 
   // 1 HZ ISR
   if(Timer_1HZ_FG)
   {
     Send_Sensor_Data(); // Push Serial Data
-    Timer_1HZ_FG = false;
+    Timer_1HZ_FG = false;  // Reset ISR
   }
 }
 
