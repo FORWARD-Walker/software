@@ -14,11 +14,11 @@
 #include "Pins.h"
 
 // Boolean flags
-bool useCV = true; // Set to use computer vision
-bool useSonar = true; // Set to use sonar functions
-bool useImu = true; // Set to use IMU
-bool useHaptics = true; // Set to use Haptics
-bool useWheels = true; // Set to use Wheels
+bool useCV = false; // Set to use computer vision
+bool useSonar = false; // Set to use sonar functions
+bool useImu = false; // Set to use IMU
+bool useHaptics = false; // Set to use Haptics
+bool useWheels = false; // Set to use Wheels
 
 struct Camera_Data_Struct
 {
