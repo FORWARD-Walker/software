@@ -14,11 +14,13 @@ void Navigation::Sample_Sonar_Avoidance()
         {
             pulseHaptic(3, 'R');
             veer(45.0, 'L');
+            pulseHaptic(3, 'R');
         }
         else
         {
             pulseHaptic(3, 'L');
             veer(45.0, 'R');
+            pulseHaptic(3, 'L');
         }
     }
 }
