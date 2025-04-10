@@ -1,5 +1,6 @@
 // Heartbeat LED
-#define LED 2
+#define yLED 14
+#define bLED 27
 
 // I2C Pins
 #define SDA 32
@@ -10,10 +11,10 @@
 #define ECHO1 34 // Echo pin for sensor 1
 #define TRIG2 26 // Trigger pin for sensor 2
 #define ECHO2 35 // Echo pin for sensor 2
-#define TRIG3 22 // Trigger pin for sensor 3
-#define ECHO3 23 // Echo pin for sensor 3
-#define TRIG4 19 // Trigger pin for sensor 4
-#define ECHO4 21 // Echo pin for sensor 4
+#define TRIG3 19 // Trigger pin for sensor 3
+#define ECHO3 21 // Echo pin for sensor 3
+#define TRIG4 22 // Trigger pin for sensor 4
+#define ECHO4 23 // Echo pin for sensor 4
 
 // Haptic pins
 #define LHMP1 12 // Left Haptic motor pin 1

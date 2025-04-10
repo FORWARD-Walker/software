@@ -96,8 +96,10 @@ void setup()
   Wire.begin(SDA, SCL);
 
   // Setup heartbeat
-  pinMode(LED, OUTPUT); // Set up LED as output
-  digitalWrite(LED, HIGH); // Init to high
+  pinMode(yLED, OUTPUT); // Set up LED as output
+  digitalWrite(yLED, HIGH); // Init to high
+  pinMode(bLED, OUTPUT); // Set up LED as output
+  digitalWrite(bLED, LOW); // Init to high
 
   // Setup Timers and Interrupts
   // Timer 1 Hz
@@ -127,8 +129,6 @@ void setup()
   pNavigation = new Navigation(pWalker);
   pNetworking->pushSerialData("Navigation Initialized!\n");
 
-  pWalker->pWheelL->startWheel(350, 'F');
-  pWalker->pWheelR->startWheel(350, 'F');
 }
 
 // Main loop
@@ -152,6 +152,8 @@ void loop()
   if(Timer_1HZ_FG)
   {
     Send_Sensor_Data(); // Push Serial Data
+    digitalWrite(yLED, digitalRead(yLED)^1); // Flash heartbeat
+    digitalWrite(bLED, digitalRead(bLED)^1); // Flash heartbeat
     Timer_1HZ_FG = false;  // Reset ISR
   }
 }
@@ -291,11 +293,11 @@ Sensor_Data_Struct parseCameraData(Sensor_Data_Struct Sensor_Data, String &input
 // send Sensor data to website
 void Send_Sensor_Data()
 {
-  String sensorData;
+  String sensorData = "";
 
   if(useSonar)
   {
-    sensorData = "S1: ";
+    sensorData += "S1: ";
     sensorData += Sensor_Data.S1_Distance;
     sensorData += " S2: ";
     sensorData += Sensor_Data.S2_Distance;
