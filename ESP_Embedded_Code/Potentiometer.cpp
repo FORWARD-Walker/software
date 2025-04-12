@@ -1,9 +1,9 @@
 #include <Pins.h>
 #include "Potentiometer.h"
 
-void Potentiometer::Potentiometer(int potPin)
+Potentiometer::Potentiometer(int potPin)
 {
-    this->potPin = potPin
+    this->potPin = potPin;
     this->setup();
     this->value = 0;
 }

@@ -7,6 +7,9 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
 
+#define IP_ADDR "192.168.4.2"
+#define PORT 12345
+
 // Networking Class
 class Networking
 {

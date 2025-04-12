@@ -1,11 +1,10 @@
 #include "Haptic.h"
 
 // Create object
-Haptic::Haptic(int motorPin1, int motorPin2, int enPin)
+Haptic::Haptic(int motorPin1, int motorPin2)
 {
     this->motorPin1 = motorPin1;
     this->motorPin2 = motorPin2;
-    this->enPin = enPin;
     this->setup();
     this->buzzing = false;
 }
@@ -16,20 +15,18 @@ void Haptic::setup()
     // Set up haptic motors
     pinMode(this->motorPin1, OUTPUT);
     pinMode(this->motorPin2, OUTPUT);
-    pinMode(this->enPin, OUTPUT);
-
+    digitalWrite(this->motorPin1, LOW);
+    digitalWrite(this->motorPin2, LOW);
 }
 
 void Haptic::startHaptic()
 {
-    this->buzzing = true;
-
-    ledcWrite(this->enPin, dutyCycle);
 
     // while the distance is within a little over a foot, vibrate haptics
     // Move the haptic
     digitalWrite(this->motorPin1, LOW);
     digitalWrite(this->motorPin2, HIGH);
+    this->buzzing = true;
 }
 
 void Haptic::stopHaptic()
@@ -43,5 +40,5 @@ void Haptic::stopHaptic()
 // Print to serial the current pinouts
 String Haptic::printPins()
 {
-    return String("Motor Pin 1: ") + this->motorPin1 + String(" Motor Pin 2: ") + this->motorPin2 + String(" Enable Pin: ") + this->enPin + "\n";
+    return String("Motor Pin 1: ") + this->motorPin1 + String(" Motor Pin 2: ") + this->motorPin2 + "\n";
 }

@@ -9,10 +9,9 @@ class Haptic
 private:
     int motorPin1;
     int motorPin2;
-    int enPin;
 
 public:
-    Haptic(int motorPin1, int motorPin2, int enPin);
+    Haptic(int motorPin1, int motorPin2);
     void setup();                // Setup function
     void startHaptic(); // Start the haptic motor
     void stopHaptic();           // Stop the haptic motor

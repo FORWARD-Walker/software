@@ -14,4 +14,10 @@
 
 #define PHOTORESISTOR_RES 12
 
+// Speed Constants
+#define SPEED_1 325
+#define SPEED_2 350
+#define SPEED_1_RIGHT_WHEEL_OFFSET 20
+#define SPEED_2_RIGHT_WHEEL_OFFSET 30
+
 #endif

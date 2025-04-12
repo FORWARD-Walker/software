@@ -1,5 +1,5 @@
 #include "Navigation.h"
-#include <map> // For counting obstacle types
+#include "Constants.h"
 
 // Navigation constructor
 Navigation::Navigation(Walker *pWalker, Camera *pCamera)
@@ -90,19 +90,30 @@ void Navigation::pulseHaptic(int urgency, char direction)
         Serial.println("Invalid pulse code.");
     }
 
-    // Trigger appropriate side's haptic feedback
-    if (direction == 'L') {
-        for (int i = 0; i < urgency; ++i) {
-            this->pWalker->pHapticL->startHaptic();
-            delay(delayTime);
-            this->pWalker->pHapticL->stopHaptic();
-        }
-    } else {
-        for (int i = 0; i < urgency; ++i) {
-            this->pWalker->pHapticR->startHaptic();
-            delay(delayTime);
-            this->pWalker->pHapticR->stopHaptic();
-        }
+    // Buzz appropritate side
+    if (direction == 'L')
+    {
+        this->pWalker->pHapticL->startHaptic();
+        delay(delayTime);
+        this->pWalker->pHapticL->stopHaptic();
+        this->pWalker->pHapticL->startHaptic();
+        delay(delayTime);
+        this->pWalker->pHapticL->stopHaptic();
+        this->pWalker->pHapticL->startHaptic();
+        delay(delayTime);
+        this->pWalker->pHapticL->stopHaptic();
+    }
+    else
+    {
+        this->pWalker->pHapticR->startHaptic();
+        delay(delayTime);
+        this->pWalker->pHapticR->stopHaptic();
+        this->pWalker->pHapticR->startHaptic();
+        delay(delayTime);
+        this->pWalker->pHapticR->stopHaptic();
+        this->pWalker->pHapticR->startHaptic();
+        delay(delayTime);
+        this->pWalker->pHapticR->stopHaptic();
     }
 }
 
@@ -115,11 +126,17 @@ void Navigation::veer(float aspect, char direction)
     // Pivot to desired direction
     pivot(aspect, direction);
 
-    // Move forward until the obstacle is out of range
-    if (direction == 'L') {
-        this->pWalker->pWheelL->startWheel(350, 'F');
-        this->pWalker->pWheelR->startWheel(350, 'F');
-        while (this->pWalker->pS3->distance < 100) {
+    // Move forward till object is out of way
+    switch (direction)
+    {
+        // Start Wheels
+        this->pWalker->pWheelL->startWheel(this->pWalker->curSpeed, 'F');
+        this->pWalker->pWheelR->startWheel(this->pWalker->curSpeed + this->pWalker->curOffset, 'F');
+
+    // Wait for appropriate sensor to be no longer close range
+    case 'L':
+        while (this->pWalker->pS3->distance < 100)
+        {
             this->pWalker->pS3->updateDistance();
         }
     } else {
@@ -135,9 +152,9 @@ void Navigation::veer(float aspect, char direction)
     this->pWalker->pWheelR->stopWheel();
     pivot(-aspect, direction == 'L' ? 'R' : 'L');
 
-    // Restart wheels
-    this->pWalker->pWheelL->startWheel(350, 'F');
-    this->pWalker->pWheelR->startWheel(350, 'F');
+    // Retart wheels
+    this->pWalker->pWheelL->startWheel(this->pWalker->curSpeed, 'F');
+    this->pWalker->pWheelR->startWheel(this->pWalker->curSpeed + this->pWalker->curOffset, 'F');
 }
 
 // Pivot function (unchanged)
@@ -146,17 +163,22 @@ void Navigation::pivot(float aspect, char direction)
     float initAngle = this->pWalker->pIMU->yaw;
     float deltaAngle = 0.0;
 
-    // Pivot walker to the desired angle
-    if (direction == 'L') {
-        this->pWalker->pWheelR->startWheel(350, 'F');
-        while (fabs(deltaAngle) < aspect) {
+    // Pivot Walker
+    if (direction == 'L')
+    {
+        this->pWalker->pWheelR->startWheel(this->pWalker->curSpeed + this->pWalker->curOffset, 'F');
+        while (fabs(deltaAngle) < aspect)
+        {
             this->pWalker->pIMU->updateData();
             deltaAngle = fmod((initAngle - this->pWalker->pIMU->yaw) + 180.0, 360.0) - 180.0;
         }
         this->pWalker->pWheelR->stopWheel();
-    } else {
-        this->pWalker->pWheelL->startWheel(350, 'F');
-        while (fabs(deltaAngle) < aspect) {
+    }
+    else
+    {
+        this->pWalker->pWheelL->startWheel(this->pWalker->curSpeed, 'F');
+        while (fabs(deltaAngle) < aspect)
+        {
             this->pWalker->pIMU->updateData();
             deltaAngle = fmod((initAngle - this->pWalker->pIMU->yaw) + 180.0, 360.0) - 180.0;
         }

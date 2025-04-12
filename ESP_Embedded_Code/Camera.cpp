@@ -10,12 +10,14 @@ Camera::Camera() {
 }
 
 // Camera setup placeholder
-void Camera::setup() {
+void Camera::setup()
+{
     // Any initialization code for the camera can be placed here.
 }
 
 // Convert pixel coordinates to line-of-sight (LOS) vector
-std::array<double, 3> Camera::pixel2los(double i, double j) {
+std::array<double, 3> Camera::pixel2los(double i, double j)
+{
     // Calculate normalized camera coordinates
     double camXnorm = (i - PRINCIPAL_POINT_X) / FOCAL_LENGTH;
     double camYnorm = (j - PRINCIPAL_POINT_Y) / FOCAL_LENGTH;
@@ -38,6 +40,7 @@ std::array<double, 3> Camera::pixel2los(double i, double j) {
     };
 }
 
-void Camera::scenario() {
+void Camera::scenario()
+{
     // Placeholder for camera-specific scenarios
 }
