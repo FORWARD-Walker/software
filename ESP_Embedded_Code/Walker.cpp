@@ -1,5 +1,6 @@
 #include "Walker.h"
 #include "Pins.h"
+#include "Constants.h"
 
 // Create object
 Walker::Walker(bool useSonar, bool useImu, bool useHaptics, bool useWheels)
@@ -32,5 +33,21 @@ Walker::Walker(bool useSonar, bool useImu, bool useHaptics, bool useWheels)
     {
         this->pWheelL = new Wheel(LWMPF, LWMPR); // Init object
         this->pWheelR = new Wheel(RWMPF, RWMPR); // Init object
+    }
+
+    // Initialize Peripherals
+    if (usePotentiometer)
+    {
+        this->pPOW = new Potentiometer(POW); // Init 
+    }
+
+    if (useHeadlight)
+    {
+        this->pLIGHT = new Headlight(LIGHT); // Init
+    }
+
+    if (usePhotoresistor)
+    {
+        this->pPHOTO = new Photoresistor(PHOTO, PHOTORESISTOR_RES); //Init
     }
 }

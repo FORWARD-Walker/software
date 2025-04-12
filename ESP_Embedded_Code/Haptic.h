@@ -10,18 +10,16 @@ private:
     int motorPin1;
     int motorPin2;
     int enPin;
-    int dutyCycle;
 
 public:
     Haptic(int motorPin1, int motorPin2, int enPin);
     void setup();                // Setup function
-    void startHaptic(int level); // Start the haptic motor
+    void startHaptic(); // Start the haptic motor
     void stopHaptic();           // Stop the haptic motor
     String printPins();          // Print pin out
 
     // State Variables
     bool buzzing;
-    int curSpeed;
 };
 
 #endif

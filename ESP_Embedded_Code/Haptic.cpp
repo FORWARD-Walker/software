@@ -1,9 +1,5 @@
 #include "Haptic.h"
 
-#define freq 30000
-#define pwmChannel 0
-#define resolution 8
-
 // Create object
 Haptic::Haptic(int motorPin1, int motorPin2, int enPin)
 {
@@ -12,7 +8,6 @@ Haptic::Haptic(int motorPin1, int motorPin2, int enPin)
     this->enPin = enPin;
     this->setup();
     this->buzzing = false;
-    this->curSpeed = 0;
 }
 
 // Set up object
@@ -23,26 +18,10 @@ void Haptic::setup()
     pinMode(this->motorPin2, OUTPUT);
     pinMode(this->enPin, OUTPUT);
 
-    // configure LEDC PWM
-    ledcAttachChannel(this->enPin, freq, resolution, pwmChannel);
 }
 
-void Haptic::startHaptic(int level)
+void Haptic::startHaptic()
 {
-    // Determine duty cycles
-    if (level == 1)
-    {
-        dutyCycle = 150;
-    }
-    else if (level == 2)
-    {
-        dutyCycle = 200;
-    }
-    else if (level == 3)
-    {
-        dutyCycle = 255;
-    }
-    this->curSpeed = level;
     this->buzzing = true;
 
     ledcWrite(this->enPin, dutyCycle);
@@ -58,7 +37,6 @@ void Haptic::stopHaptic()
     // Stop the haptic motor
     digitalWrite(this->motorPin1, LOW);
     digitalWrite(this->motorPin2, LOW);
-    this->curSpeed = 0;
     this->buzzing = false;
 }
 

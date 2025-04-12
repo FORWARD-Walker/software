@@ -1,23 +1,44 @@
 #include "Navigation.h"
+#include <map> // For counting obstacle types
 
-// Navigation Algorithms and Helper functions
-Navigation::Navigation(Walker *pWalker)
+// Navigation constructor
+Navigation::Navigation(Walker *pWalker, Camera *pCamera)
 {
     this->pWalker = pWalker;
+    this->pCamera = pCamera;
 }
 
+// ROAD & CROWD
+void Navigation::checkForObstacles()
+{
+    std::map<std::string, int> obstacleCount; // Count occurrences of each type of obstacle
+
+    for (const Obstacle &obs : this->pCamera->getObstacles()) {
+        obstacleCount[obs.type]++;
+    }
+
+    // Check for three or more 'person'
+    if (obstacleCount["person"] >= 3) {
+        Serial.println("CROWD");
+        emergencyStop();
+    }
+
+    // Check for three or more 'car'
+    if (obstacleCount["car"] >= 3) {
+        Serial.println("ROAD");
+        emergencyStop();
+    }
+}
+
+// Sample sonar avoidance (unchanged)
 void Navigation::Sample_Sonar_Avoidance()
 {
-    if (this->pWalker->pS2->distance < 100 || this->pWalker->pS3->distance < 100)
-    {
-        if (this->pWalker->pS2->distance > this->pWalker->pS3->distance)
-        {
+    if (this->pWalker->pS2->distance < 100 || this->pWalker->pS3->distance < 100) {
+        if (this->pWalker->pS2->distance > this->pWalker->pS3->distance) {
             pulseHaptic(3, 'R');
             veer(45.0, 'L');
             pulseHaptic(3, 'R');
-        }
-        else
-        {
+        } else {
             pulseHaptic(3, 'L');
             veer(45.0, 'R');
             pulseHaptic(3, 'L');
@@ -25,27 +46,37 @@ void Navigation::Sample_Sonar_Avoidance()
     }
 }
 
-// braking function
 void Navigation::emergencyStop()
 {
+    // Stop the wheels immediately
     this->pWalker->pWheelL->stopWheel();
     this->pWalker->pWheelR->stopWheel();
-    delay(100);
-    this->pWalker->pWheelR->startWheel(500, 'R');
-    this->pWalker->pWheelL->startWheel(500, 'R');
-    delay(100);
-    this->pWalker->pWheelL->stopWheel();
-    this->pWalker->pWheelR->stopWheel();
+
+    // Define pulse pattern for haptics (like a ringtone)
+    int pattern[] = {100, 200, 100, 400}; // Duration of buzz pulses in milliseconds
+    int numBuzzes = sizeof(pattern) / sizeof(pattern[0]);
+
+    // Buzz haptics on both sides with the pulse pattern
+    for (int i = 0; i < numBuzzes; ++i) {
+        this->pWalker->pHapticL->startHaptic();
+        this->pWalker->pHapticR->startHaptic();
+        delay(pattern[i]);
+        this->pWalker->pHapticL->stopHaptic();
+        this->pWalker->pHapticR->stopHaptic();
+        delay(100); // Short pause between pulses
+    }
+
+    Serial.println("Emergency Stop Activated: Haptics Buzzing");
+    delay(100); // Ensure haptics finish buzzing
 }
 
-// Haptic pulse patterns
+// Haptic pulse patterns (unchanged)
 void Navigation::pulseHaptic(int urgency, char direction)
 {
     int delayTime;
 
-    // Determine freq to buzz haptic
-    switch (urgency)
-    {
+    // Determine frequency of haptic pulses based on urgency
+    switch (urgency) {
     case 1:
         delayTime = 500;
         break;
@@ -59,108 +90,91 @@ void Navigation::pulseHaptic(int urgency, char direction)
         Serial.println("Invalid pulse code.");
     }
 
-    // Buzz appropritate side
-    if (direction == 'L')
-    {
-        this->pWalker->pHapticL->startHaptic(urgency);
-        delay(delayTime);
-        this->pWalker->pHapticL->stopHaptic();
-        this->pWalker->pHapticL->startHaptic(urgency);
-        delay(delayTime);
-        this->pWalker->pHapticL->stopHaptic();
-        this->pWalker->pHapticL->startHaptic(urgency);
-        delay(delayTime);
-        this->pWalker->pHapticL->stopHaptic();
-    }
-    else
-    {
-        this->pWalker->pHapticR->startHaptic(urgency);
-        delay(delayTime);
-        this->pWalker->pHapticR->stopHaptic();
-        this->pWalker->pHapticR->startHaptic(urgency);
-        delay(delayTime);
-        this->pWalker->pHapticR->stopHaptic();
-        this->pWalker->pHapticR->startHaptic(urgency);
-        delay(delayTime);
-        this->pWalker->pHapticR->stopHaptic();
+    // Trigger appropriate side's haptic feedback
+    if (direction == 'L') {
+        for (int i = 0; i < urgency; ++i) {
+            this->pWalker->pHapticL->startHaptic();
+            delay(delayTime);
+            this->pWalker->pHapticL->stopHaptic();
+        }
+    } else {
+        for (int i = 0; i < urgency; ++i) {
+            this->pWalker->pHapticR->startHaptic();
+            delay(delayTime);
+            this->pWalker->pHapticR->stopHaptic();
+        }
     }
 }
 
+// Veer function (unchanged, uses pivot)
 void Navigation::veer(float aspect, char direction)
 {
-    // Stop Wheels
     this->pWalker->pWheelL->stopWheel();
     this->pWalker->pWheelR->stopWheel();
 
-    // Pivot
+    // Pivot to desired direction
     pivot(aspect, direction);
 
-    // Move forward till object is out of way
-    switch (direction)
-    {
-        // Start Wheels
+    // Move forward until the obstacle is out of range
+    if (direction == 'L') {
         this->pWalker->pWheelL->startWheel(350, 'F');
         this->pWalker->pWheelR->startWheel(350, 'F');
-
-    // Wait for appropriate sensor to be no longer close range
-    case 'L':
-        while (this->pWalker->pS3->distance < 100)
-        {
+        while (this->pWalker->pS3->distance < 100) {
             this->pWalker->pS3->updateDistance();
         }
-        break;
-    case 'R':
-        while (this->pWalker->pS2->distance < 100)
-        {
+    } else {
+        this->pWalker->pWheelL->startWheel(350, 'F');
+        this->pWalker->pWheelR->startWheel(350, 'F');
+        while (this->pWalker->pS2->distance < 100) {
             this->pWalker->pS2->updateDistance();
         }
-        break;
-    default:
-        break;
-
-        // Stop wheels
-        this->pWalker->pWheelL->stopWheel();
-        this->pWalker->pWheelR->stopWheel();
     }
 
-    // Pivot back
-    aspect = -aspect;
-    if (direction == 'L')
-        direction == 'R';
-    else
-        direction == 'L';
-    pivot(aspect, direction);
+    // Stop and pivot back
+    this->pWalker->pWheelL->stopWheel();
+    this->pWalker->pWheelR->stopWheel();
+    pivot(-aspect, direction == 'L' ? 'R' : 'L');
 
-    // Retart wheels
+    // Restart wheels
     this->pWalker->pWheelL->startWheel(350, 'F');
     this->pWalker->pWheelR->startWheel(350, 'F');
 }
 
-// Routine to stop and pivot the walker by [aspect] degrees
+// Pivot function (unchanged)
 void Navigation::pivot(float aspect, char direction)
 {
     float initAngle = this->pWalker->pIMU->yaw;
     float deltaAngle = 0.0;
 
-    // Pivot Walker
-    if (direction == 'L')
-    {
+    // Pivot walker to the desired angle
+    if (direction == 'L') {
         this->pWalker->pWheelR->startWheel(350, 'F');
-        while (fabs(deltaAngle) < aspect)
-        {
+        while (fabs(deltaAngle) < aspect) {
             this->pWalker->pIMU->updateData();
             deltaAngle = fmod((initAngle - this->pWalker->pIMU->yaw) + 180.0, 360.0) - 180.0;
         }
         this->pWalker->pWheelR->stopWheel();
-    }
-    else
-    {
+    } else {
         this->pWalker->pWheelL->startWheel(350, 'F');
-        while (fabs(deltaAngle) < aspect)
-        {
+        while (fabs(deltaAngle) < aspect) {
             this->pWalker->pIMU->updateData();
             deltaAngle = fmod((initAngle - this->pWalker->pIMU->yaw) + 180.0, 360.0) - 180.0;
         }
         this->pWalker->pWheelL->stopWheel();
     }
+}
+
+void Navigation::tiltWarning()
+{
+  if(this->pWalker->pImu->roll > 1)
+  {
+    // print to network
+    this->pWalker->pNetworking->pushSerialData("You are leaning too heavily to the right. Please don't tip the rollator.\n");
+
+  }
+  if(this->pWalker->pImu->roll < -1)
+  {
+    // print to network
+    this->pWalker->pNetworking->pushSerialData("You are leaning too heavily to the left. Please don't tip the rollator.\n");
+  }
 }

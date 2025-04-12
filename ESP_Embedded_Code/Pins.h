@@ -29,3 +29,8 @@
 #define LWMPR 17 // Left Wheel motor pin 2
 #define RWMPF 5  // Right Wheel motor pin 1
 #define RWMPR 18 // Right Wheel motor pin 2
+
+// Peripheral Pins
+#define PHOTO 36
+#define LIGHT 4
+#define POW 39

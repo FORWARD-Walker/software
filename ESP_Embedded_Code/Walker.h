@@ -5,6 +5,9 @@
 #include "Imu.h"
 #include "Haptic.h"
 #include "Wheel.h"
+#include "Photoresistor.h"
+#include "Headlight.h"
+#include "Potentiometer.h"
 
 // Walker structure
 class Walker

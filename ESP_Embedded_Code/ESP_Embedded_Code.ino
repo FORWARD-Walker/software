@@ -19,6 +19,9 @@ bool useSonar = false; // Set to use sonar functions
 bool useImu = false; // Set to use IMU
 bool useHaptics = false; // Set to use Haptics
 bool useWheels = false; // Set to use Wheels
+bool usePotentiometer = false; // Set to use Potentiometer
+bool useHeadlight = false; // Set to use Headlight
+bool usePhotoresistor = false; // Set to use Photoresistor
 
 struct Camera_Data_Struct
 {

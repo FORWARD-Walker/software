@@ -18,6 +18,7 @@ public:
     void Sample_Sonar_Avoidance();
     void emergencyStop();
     void pulseHaptic(int urgency, char direction);
+    void tiltWarning();
 };
 
 #endif
