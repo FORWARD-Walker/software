@@ -1,8 +1,5 @@
 #include "Networking.h"
 
-#define IP_ADDR "192.168.4.2"
-#define PORT 12345
-
 // Create object
 Networking::Networking() : server(80)
 {

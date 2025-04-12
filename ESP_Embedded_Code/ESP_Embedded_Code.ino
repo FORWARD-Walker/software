@@ -9,16 +9,10 @@
 #include <Wire.h> // I2C
 #include "Networking.h"
 #include "utils.cpp"
+#include "Constants.h"
 #include "Navigation.h"
 #include "Walker.h"
 #include "Pins.h"
-
-// Boolean flags
-bool useCV = false; // Set to use computer vision
-bool useSonar = false; // Set to use sonar functions
-bool useImu = false; // Set to use IMU
-bool useHaptics = false; // Set to use Haptics
-bool useWheels = false; // Set to use Wheels
 
 struct Camera_Data_Struct
 {
@@ -93,7 +87,7 @@ void setup()
   Serial.begin(115200); // Init Serial
 
   // Set up I2C
-  Wire.begin(SDA, SCL);
+  Wire.begin(I2C_SDA, I2C_SCL);
 
   // Setup heartbeat
   pinMode(yLED, OUTPUT); // Set up LED as output
@@ -122,7 +116,7 @@ void setup()
   pNetworking->pushSerialData("Network Initialized!\n");
 
   // Init Walker
-  pWalker = new Walker(useSonar, useImu, useHaptics, useWheels);
+  pWalker = new Walker();
   pNetworking->pushSerialData("Walker Initialized!\n");
 
   // Init Navigation
@@ -134,6 +128,7 @@ void setup()
 // Main loop
 void loop()
 { 
+
   // 30 HZ ISR
   if(Timer_30HZ_FG)
   {
@@ -144,16 +139,25 @@ void loop()
   // 10 HZ ISR
   if(Timer_10HZ_FG)
   {
-    Update_Data(); // Update Sensor Data
+    // Check Speed
+    pNavigation->setSpeed();
+    pNetworking->pushSerialData(String(pWalker->pPotentiometer->value));
+
+    // Update Sensor Data
+    Update_Data(); 
+    
     Timer_10HZ_FG = false; // Reset ISR
   }
 
   // 1 HZ ISR
   if(Timer_1HZ_FG)
   {
-    Send_Sensor_Data(); // Push Serial Data
-    digitalWrite(yLED, digitalRead(yLED)^1); // Flash heartbeat
-    digitalWrite(bLED, digitalRead(bLED)^1); // Flash heartbeat
+    // Push Serial Data
+    Send_Sensor_Data();
+
+    // Blink Heartbeat
+    Blink_Heartbeat();
+
     Timer_1HZ_FG = false;  // Reset ISR
   }
 }
@@ -174,48 +178,46 @@ static void IRAM_ATTR Timer_30Hz_ISR()
   Timer_30HZ_FG = true;
 }
 
+void Blink_Heartbeat()
+{
+    digitalWrite(yLED, digitalRead(yLED)^1); // Flash heartbeat
+    digitalWrite(bLED, digitalRead(bLED)^1); // Flash heartbeat
+}
+
+
 // Update Sensor Data
 void Update_Data()
 {
     // Update Sonar Distances
-    if (useSonar)
-    {
-      pWalker->pS1->updateDistance();
-      Sensor_Data.S1_Distance = pWalker->pS1->distance;
-      pWalker->pS2->updateDistance();
-      Sensor_Data.S2_Distance = pWalker->pS2->distance;
-      pWalker->pS3->updateDistance();
-      Sensor_Data.S3_Distance = pWalker->pS3->distance;
-      pWalker->pS4->updateDistance();
-      Sensor_Data.S4_Distance = pWalker->pS4->distance;
-    }
+    pWalker->pS1->updateDistance();
+    Sensor_Data.S1_Distance = pWalker->pS1->distance;
+    pWalker->pS2->updateDistance();
+    Sensor_Data.S2_Distance = pWalker->pS2->distance;
+    pWalker->pS3->updateDistance();
+    Sensor_Data.S3_Distance = pWalker->pS3->distance;
+    pWalker->pS4->updateDistance();
+    Sensor_Data.S4_Distance = pWalker->pS4->distance;
 
     // Update IMU readings
-    if (useImu)
-    {
-      pWalker->pIMU->updateData();
-      Sensor_Data.yaw = pWalker->pIMU->yaw;
-      Sensor_Data.pitch = pWalker->pIMU->pitch;
-      Sensor_Data.roll = pWalker->pIMU->roll;
-      Sensor_Data.accx = pWalker->pIMU->accx;
-      Sensor_Data.accy = pWalker->pIMU->accy;
-      Sensor_Data.accz = pWalker->pIMU->accz;
-      Sensor_Data.velx = pWalker->pIMU->velx;
-      Sensor_Data.vely = pWalker->pIMU->vely;
-      Sensor_Data.velz = pWalker->pIMU->velz;
-      Sensor_Data.posx = pWalker->pIMU->posx;
-      Sensor_Data.posy = pWalker->pIMU->posy;
-      Sensor_Data.posz = pWalker->pIMU->posz;
-    }
+    pWalker->pIMU->updateData();
+    Sensor_Data.yaw = pWalker->pIMU->yaw;
+    Sensor_Data.pitch = pWalker->pIMU->pitch;
+    Sensor_Data.roll = pWalker->pIMU->roll;
+    Sensor_Data.accx = pWalker->pIMU->accx;
+    Sensor_Data.accy = pWalker->pIMU->accy;
+    Sensor_Data.accz = pWalker->pIMU->accz;
+    Sensor_Data.velx = pWalker->pIMU->velx;
+    Sensor_Data.vely = pWalker->pIMU->vely;
+    Sensor_Data.velz = pWalker->pIMU->velz;
+    Sensor_Data.posx = pWalker->pIMU->posx;
+    Sensor_Data.posy = pWalker->pIMU->posy;
+    Sensor_Data.posz = pWalker->pIMU->posz;
 
     // Update Camera Data
-    if(useCV)
-    {
-      char temp[1024];
-      pNetworking->getUDPPacket(temp, sizeof(temp));
-      String camDataStr = String(temp);
-      Sensor_Data = parseCameraData(Sensor_Data, camDataStr);
-    }
+    char temp[1024];
+    pNetworking->getUDPPacket(temp, sizeof(temp));
+    String camDataStr = String(temp);
+    Sensor_Data = parseCameraData(Sensor_Data, camDataStr);
 }
 
 Sensor_Data_Struct parseCameraData(Sensor_Data_Struct Sensor_Data, String &input)
@@ -295,71 +297,65 @@ void Send_Sensor_Data()
 {
   String sensorData = "";
 
-  if(useSonar)
-  {
-    sensorData += "S1: ";
-    sensorData += Sensor_Data.S1_Distance;
-    sensorData += " S2: ";
-    sensorData += Sensor_Data.S2_Distance;
-    sensorData += " S3: ";
-    sensorData += Sensor_Data.S3_Distance;
-    sensorData += " S4: ";
-    sensorData += Sensor_Data.S4_Distance;
-    sensorData += '\n';
-  }
+  // Sonar Sensors
+  sensorData += "S1: ";
+  sensorData += Sensor_Data.S1_Distance;
+  sensorData += " S2: ";
+  sensorData += Sensor_Data.S2_Distance;
+  sensorData += " S3: ";
+  sensorData += Sensor_Data.S3_Distance;
+  sensorData += " S4: ";
+  sensorData += Sensor_Data.S4_Distance;
+  sensorData += '\n';
 
-  if(useImu)
-  {
-    sensorData += "Yaw: ";
-    sensorData += Sensor_Data.yaw;
-    sensorData += " Pitch: ";
-    sensorData += Sensor_Data.pitch;
-    sensorData += " Roll: ";
-    sensorData += Sensor_Data.roll;
-    sensorData += '\n';
-    sensorData += "Accx: ";
-    sensorData += Sensor_Data.accx;
-    sensorData += " Accy: ";
-    sensorData += Sensor_Data.accy;
-    sensorData += " Accz: ";
-    sensorData += Sensor_Data.accz;
-    sensorData += '\n';
-    sensorData += "Velx: ";
-    sensorData += Sensor_Data.velx;
-    sensorData += " Vely: ";
-    sensorData += Sensor_Data.vely;
-    sensorData += " Velz: ";
-    sensorData += Sensor_Data.velz;
-    sensorData += '\n';
-    sensorData += "Posx: ";
-    sensorData += Sensor_Data.posx;
-    sensorData += " Posy: ";
-    sensorData += Sensor_Data.posy;
-    sensorData += " Posz: ";
-    sensorData += Sensor_Data.posz;
-    sensorData += '\n';
-  }
+  // IMU Data
+  sensorData += "Yaw: ";
+  sensorData += Sensor_Data.yaw;
+  sensorData += " Pitch: ";
+  sensorData += Sensor_Data.pitch;
+  sensorData += " Roll: ";
+  sensorData += Sensor_Data.roll;
+  sensorData += '\n';
+  sensorData += "Accx: ";
+  sensorData += Sensor_Data.accx;
+  sensorData += " Accy: ";
+  sensorData += Sensor_Data.accy;
+  sensorData += " Accz: ";
+  sensorData += Sensor_Data.accz;
+  sensorData += '\n';
+  sensorData += "Velx: ";
+  sensorData += Sensor_Data.velx;
+  sensorData += " Vely: ";
+  sensorData += Sensor_Data.vely;
+  sensorData += " Velz: ";
+  sensorData += Sensor_Data.velz;
+  sensorData += '\n';
+  sensorData += "Posx: ";
+  sensorData += Sensor_Data.posx;
+  sensorData += " Posy: ";
+  sensorData += Sensor_Data.posy;
+  sensorData += " Posz: ";
+  sensorData += Sensor_Data.posz;
+  sensorData += '\n';
 
-  if(useCV)
+  // CV Data
+  sensorData += "Object Count: ";
+  sensorData += Sensor_Data.objCount;
+  sensorData += "\n";
+  for(int i = 0; i < Sensor_Data.objCount; i++)
   {
-    sensorData += "Object Count: ";
-    sensorData += Sensor_Data.objCount;
-    sensorData += "\n";
-    for(int i = 0; i < Sensor_Data.objCount; i++)
-      {
-        sensorData += "Object: ";
-        sensorData += Sensor_Data.objects[i].name;
-        sensorData += " [x1: ";
-        sensorData += Sensor_Data.objects[i].x1;
-        sensorData += " x2: ";
-        sensorData += Sensor_Data.objects[i].x2;
-        sensorData += " y1: ";
-        sensorData += Sensor_Data.objects[i].y1;
-        sensorData += " y2: ";
-        sensorData += Sensor_Data.objects[i].y2;
-        sensorData += "]\n";
+    sensorData += "Object: ";
+    sensorData += Sensor_Data.objects[i].name;
+    sensorData += " [x1: ";
+    sensorData += Sensor_Data.objects[i].x1;
+    sensorData += " x2: ";
+    sensorData += Sensor_Data.objects[i].x2;
+    sensorData += " y1: ";
+    sensorData += Sensor_Data.objects[i].y1;
+    sensorData += " y2: ";
+    sensorData += Sensor_Data.objects[i].y2;
+    sensorData += "]\n";
 
-      }
   }
 
   pNetworking->pushSerialData(sensorData);

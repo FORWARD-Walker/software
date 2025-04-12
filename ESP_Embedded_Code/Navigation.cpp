@@ -1,9 +1,38 @@
 #include "Navigation.h"
+#include "Constants.h"
 
 // Navigation Algorithms and Helper functions
 Navigation::Navigation(Walker *pWalker)
 {
     this->pWalker = pWalker;
+}
+
+// Determine Potentiometer Speed
+void Navigation::setSpeed()
+{
+    this->pWalker->pPotentiometer->readValue();
+    int potVal = this->pWalker->pPotentiometer->value;
+    if (potVal > 3500)
+    {
+        this->pWalker->pWheelL->stopWheel();
+        this->pWalker->pWheelR->stopWheel();
+        this->pWalker->curSpeed = 0;
+        this->pWalker->curOffset = 0;
+    }
+    else if (potVal > 1000)
+    {
+        this->pWalker->curSpeed = SPEED_1;
+        this->pWalker->curOffset = SPEED_1_RIGHT_WHEEL_OFFSET;
+        this->pWalker->pWheelL->startWheel(this->pWalker->curSpeed, 'F');
+        this->pWalker->pWheelR->startWheel(this->pWalker->curSpeed + this->pWalker->curOffset, 'F');
+    }
+    else
+    {
+        this->pWalker->curSpeed = SPEED_2;
+        this->pWalker->curOffset = SPEED_2_RIGHT_WHEEL_OFFSET;
+        this->pWalker->pWheelL->startWheel(this->pWalker->curSpeed, 'F');
+        this->pWalker->pWheelR->startWheel(this->pWalker->curSpeed + this->pWalker->curOffset, 'F');
+    }
 }
 
 void Navigation::Sample_Sonar_Avoidance()
@@ -62,25 +91,25 @@ void Navigation::pulseHaptic(int urgency, char direction)
     // Buzz appropritate side
     if (direction == 'L')
     {
-        this->pWalker->pHapticL->startHaptic(urgency);
+        this->pWalker->pHapticL->startHaptic();
         delay(delayTime);
         this->pWalker->pHapticL->stopHaptic();
-        this->pWalker->pHapticL->startHaptic(urgency);
+        this->pWalker->pHapticL->startHaptic();
         delay(delayTime);
         this->pWalker->pHapticL->stopHaptic();
-        this->pWalker->pHapticL->startHaptic(urgency);
+        this->pWalker->pHapticL->startHaptic();
         delay(delayTime);
         this->pWalker->pHapticL->stopHaptic();
     }
     else
     {
-        this->pWalker->pHapticR->startHaptic(urgency);
+        this->pWalker->pHapticR->startHaptic();
         delay(delayTime);
         this->pWalker->pHapticR->stopHaptic();
-        this->pWalker->pHapticR->startHaptic(urgency);
+        this->pWalker->pHapticR->startHaptic();
         delay(delayTime);
         this->pWalker->pHapticR->stopHaptic();
-        this->pWalker->pHapticR->startHaptic(urgency);
+        this->pWalker->pHapticR->startHaptic();
         delay(delayTime);
         this->pWalker->pHapticR->stopHaptic();
     }
@@ -99,8 +128,8 @@ void Navigation::veer(float aspect, char direction)
     switch (direction)
     {
         // Start Wheels
-        this->pWalker->pWheelL->startWheel(350, 'F');
-        this->pWalker->pWheelR->startWheel(350, 'F');
+        this->pWalker->pWheelL->startWheel(this->pWalker->curSpeed, 'F');
+        this->pWalker->pWheelR->startWheel(this->pWalker->curSpeed + this->pWalker->curOffset, 'F');
 
     // Wait for appropriate sensor to be no longer close range
     case 'L':
@@ -132,8 +161,8 @@ void Navigation::veer(float aspect, char direction)
     pivot(aspect, direction);
 
     // Retart wheels
-    this->pWalker->pWheelL->startWheel(350, 'F');
-    this->pWalker->pWheelR->startWheel(350, 'F');
+    this->pWalker->pWheelL->startWheel(this->pWalker->curSpeed, 'F');
+    this->pWalker->pWheelR->startWheel(this->pWalker->curSpeed + this->pWalker->curOffset, 'F');
 }
 
 // Routine to stop and pivot the walker by [aspect] degrees
@@ -145,7 +174,7 @@ void Navigation::pivot(float aspect, char direction)
     // Pivot Walker
     if (direction == 'L')
     {
-        this->pWalker->pWheelR->startWheel(350, 'F');
+        this->pWalker->pWheelR->startWheel(this->pWalker->curSpeed + this->pWalker->curOffset, 'F');
         while (fabs(deltaAngle) < aspect)
         {
             this->pWalker->pIMU->updateData();
@@ -155,7 +184,7 @@ void Navigation::pivot(float aspect, char direction)
     }
     else
     {
-        this->pWalker->pWheelL->startWheel(350, 'F');
+        this->pWalker->pWheelL->startWheel(this->pWalker->curSpeed, 'F');
         while (fabs(deltaAngle) < aspect)
         {
             this->pWalker->pIMU->updateData();
