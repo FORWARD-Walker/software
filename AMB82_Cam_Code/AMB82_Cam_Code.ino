@@ -35,6 +35,8 @@ void setup()
     IPAddress subnet(255, 255, 255, 0); // Default subnet
 
     WiFi.config(local_IP, gateway, subnet); // Set static IP
+    WiFi.disconnect();  // erase saved credentials
+    delay(500);
     WiFi.begin(ssid, pass);
     Serial.println(WiFi.localIP());
 
