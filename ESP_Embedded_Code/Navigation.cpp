@@ -115,6 +115,7 @@ void Navigation::pulseHaptic(int urgency, char direction)
     }
 }
 
+// Veer walker
 void Navigation::veer(float aspect, char direction)
 {
     // Stop Wheels

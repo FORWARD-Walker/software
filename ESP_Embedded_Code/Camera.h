@@ -2,15 +2,34 @@
 #define CAMERA_H
 
 // Includes
-#include <array>
+#include <vector> // Use vector, not array
 #include "Constants.h"
+#include "Networking.h"
 
-// Constant defines
-#define FOCAL_LENGTH 22       // mm
-#define PRINCIPAL_POINT_X 960 // pixel
-#define PRINCIPAL_POINT_Y 540 // pixel
+// Defines the camera data of interest
+struct Camera_Data_Struct
+{
+    int x1 = 0;
+    int x2 = 0;
+    int y1 = 0;
+    int y2 = 0;
+    String name;
+};
 
-// Constants();
-std::array<double, 3> pixel2los(double i, double j);
+class Camera
+{
+public:
+    // Constructor
+    Camera(Networking *pNetworking);
+
+    // Public Methods
+    void update();
+    Camera_Data_Struct parseCameraData(String &input);
+
+    // Attributes
+    Networking *pNetworking;
+    int objCount;
+    std::vector<Camera_Data_Struct> objects; // camData is a dynamic list of object data
+};
 
 #endif

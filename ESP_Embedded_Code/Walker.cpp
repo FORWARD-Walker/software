@@ -2,7 +2,7 @@
 #include "Pins.h"
 
 // Create object
-Walker::Walker()
+Walker::Walker(Networking *pNetworking)
 {
     this->curSpeed = 0;
     this->curOffset = 0;
@@ -26,4 +26,7 @@ Walker::Walker()
 
     // Initialize Potentiometer Object
     this->pPotentiometer = new Potentiometer(POW);
+
+    // Initialize Camera Object
+    this->pCamera = new Camera(pNetworking);
 }

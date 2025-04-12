@@ -6,12 +6,14 @@
 #include "Haptic.h"
 #include "Wheel.h"
 #include "Potentiometer.h"
+#include "Camera.h"
+#include "Networking.h"
 
 // Walker structure
 class Walker
 {
 public:
-  Walker(); // Constructor
+  Walker(Networking *pNetworking); // Constructor
 
   int curSpeed;  // Track current speed
   int curOffset; // Track Current right wheel offset
@@ -35,6 +37,9 @@ public:
 
   // Potentiometer Object
   Potentiometer *pPotentiometer;
+
+  // Camera Object
+  Camera *pCamera;
 };
 
 #endif

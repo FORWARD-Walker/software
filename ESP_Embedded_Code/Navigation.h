@@ -2,6 +2,8 @@
 #define NAVIGATION_H
 
 #include "Walker.h"
+#include "FixedQueue.h"
+#include <queue>
 #include <Arduino.h>
 
 // Walker structure
@@ -14,11 +16,12 @@ private:
 
 public:
     Navigation(Walker *pWalker); // Constructor
-    Walker *pWalker;
     void Sample_Sonar_Avoidance();
     void emergencyStop();
     void pulseHaptic(int urgency, char direction);
     void setSpeed();
+
+    Walker *pWalker; // Walker Pointer
 };
 
 #endif

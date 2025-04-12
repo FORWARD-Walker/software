@@ -28,7 +28,7 @@ void Networking::setup()
 void Networking::getUDPPacket(char *data, size_t dataSize)
 {
     // Assert bit to signal receive a packet
-    udp.beginPacket(IP_ADDR, PORT);
+    udp.beginPacket(CAM_IP_ADDR, PORT);
     uint8_t rxFG = 1;
     udp.write(rxFG);
     udp.endPacket();
