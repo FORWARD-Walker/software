@@ -30,7 +30,14 @@ void setup()
     Serial.begin(115200); // Start serial
 
     // Attempt to connect to the access point
+    IPAddress local_IP(192, 168, 4, 107); // Static IP for camera
+    IPAddress gateway(192, 168, 4, 1);  // Your MCU softAP IP
+    IPAddress subnet(255, 255, 255, 0); // Default subnet
+
+    WiFi.config(local_IP, gateway, subnet); // Set static IP
     WiFi.begin(ssid, pass);
+    Serial.println(WiFi.localIP());
+
 
     // Wait until the ESP32 is connected to the AP
     while (WiFi.status() != WL_CONNECTED) { delay(500); }

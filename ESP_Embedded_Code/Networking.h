@@ -7,7 +7,7 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
 
-#define CAM_IP_ADDR "192.168.4.2"
+#define CAM_IP_ADDR "192.168.4.107"
 #define PORT 12345
 
 // Networking Class
