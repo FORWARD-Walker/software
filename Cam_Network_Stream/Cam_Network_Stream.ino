@@ -43,8 +43,8 @@ RTSP rtsp;
 StreamIO videoStreamer(1, 1);
 StreamIO videoStreamerNN(1, 1);
 
-char ssid[] = "FORWARD_Network";   // your network SSID (name)
-char pass[] = "Forward?0525";       // your network password
+char ssid[] = "SpectrumSetup-FE65";   // your network SSID (name)
+char pass[] = "tannerboys05";       // your network password
 int status = WL_IDLE_STATUS;
 
 IPAddress ip;

@@ -14,7 +14,7 @@
 #include "Pins.h"
 
 // Boolean flags
-bool useCV = false; // Set to use computer vision
+bool useCV = true; // Set to use computer vision
 bool useSonar = false; // Set to use sonar functions
 bool useImu = false; // Set to use IMU
 bool useHaptics = false; // Set to use Haptics
