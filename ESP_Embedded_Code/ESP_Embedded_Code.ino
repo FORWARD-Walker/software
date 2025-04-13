@@ -86,7 +86,7 @@ void setup()
   pNetworking->pushSerialData("Enviroment Initialized!\n");
 
   // Init Navigation
-  pNavigation = new Navigation(pWalker, pEnviroment);
+  pNavigation = new Navigation(pWalker, pNetworking, pEnviroment);
   pNetworking->pushSerialData("Navigation Initialized!\n");
 }
 

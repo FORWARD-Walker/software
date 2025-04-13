@@ -1,10 +1,12 @@
 #include "Navigation.h"
 #include "Constants.h"
+#include "Field.h"
 
 // Navigation Algorithms and Helper functions
-Navigation::Navigation(Walker *pWalker, Enviroment *pEnviroment)
+Navigation(Walker *pWalker, Networking *pNetworking, Enviroment *pEnviroment)
 {
     this->pWalker = pWalker;
+    this->pNetworking = pNetworking;
     this->pEnviroment = pEnviroment;
 }
 
@@ -33,40 +35,64 @@ void Navigation::navigate()
         this->pWalker->pWheelL->startWheel(this->pWalker->curSpeed - CROWD_THROTTLE_VALUE, 'F');
         this->pWalker->pWheelR->startWheel(this->pWalker->curSpeed + this->pWalker->curOffset - CROWD_THROTTLE_VALUE, 'F');
     }
-
 }
 
-// Determine Potentiometer Speed
-void Navigation::setSpeed()
+//////////////////////////////////////////////////////////////////////////////////////////////
+// P-Field Algorithm
+//////////////////////////////////////////////////////////////////////////////////////////////
+
+// ROAD & CROWD
+void Navigation::checkForObstacles()
 {
-    if(!pEnviroment->safezoneViolation && !pEnviroment->crowd && !pEnviroment->road)
+    if (!pEnviroment->safezoneViolation && !pEnviroment->crowd && !pEnviroment->road)
     {
-      this->pWalker->pPotentiometer->readValue();
-      int potVal = this->pWalker->pPotentiometer->value;
-      if (potVal > 3500)
-      {
-          this->pWalker->pWheelL->stopWheel();
-          this->pWalker->pWheelR->stopWheel();
-          this->pWalker->curSpeed = 0;
-          this->pWalker->curOffset = 0;
-      }
-      else if (potVal > 1000)
-      {
-          this->pWalker->curSpeed = SPEED_1;
-          this->pWalker->curOffset = SPEED_1_RIGHT_WHEEL_OFFSET;
-          this->pWalker->pWheelL->startWheel(this->pWalker->curSpeed, 'F');
-          this->pWalker->pWheelR->startWheel(this->pWalker->curSpeed + this->pWalker->curOffset, 'F');
-      }
-      else
-      {
-          this->pWalker->curSpeed = SPEED_2;
-          this->pWalker->curOffset = SPEED_2_RIGHT_WHEEL_OFFSET;
-          this->pWalker->pWheelL->startWheel(this->pWalker->curSpeed, 'F');
-          this->pWalker->pWheelR->startWheel(this->pWalker->curSpeed + this->pWalker->curOffset, 'F');
-      }
-  }
+        this->pWalker->pPotentiometer->readValue();
+        int potVal = this->pWalker->pPotentiometer->value;
+        if (potVal > 3500)
+        {
+            this->pWalker->pWheelL->stopWheel();
+            this->pWalker->pWheelR->stopWheel();
+            this->pWalker->curSpeed = 0;
+            this->pWalker->curOffset = 0;
+        }
+        else if (potVal > 1000)
+        {
+            this->pWalker->curSpeed = SPEED_1;
+            this->pWalker->curOffset = SPEED_1_RIGHT_WHEEL_OFFSET;
+            this->pWalker->pWheelL->startWheel(this->pWalker->curSpeed, 'F');
+            this->pWalker->pWheelR->startWheel(this->pWalker->curSpeed + this->pWalker->curOffset, 'F');
+        }
+        else
+        {
+            this->pWalker->curSpeed = SPEED_2;
+            this->pWalker->curOffset = SPEED_2_RIGHT_WHEEL_OFFSET;
+            this->pWalker->pWheelL->startWheel(this->pWalker->curSpeed, 'F');
+            this->pWalker->pWheelR->startWheel(this->pWalker->curSpeed + this->pWalker->curOffset, 'F');
+        }
+    }
+    std::map<std::string, int> obstacleCount; // Count occurrences of each type of obstacle
+
+    for (const Obstacle &obs : this->pCamera->getObstacles())
+    {
+        obstacleCount[obs.type]++;
+    }
+
+    // Check for three or more 'person'
+    if (obstacleCount["person"] >= 3)
+    {
+        Serial.println("CROWD");
+        emergencyStop();
+    }
+
+    // Check for three or more 'car'
+    if (obstacleCount["car"] >= 3)
+    {
+        Serial.println("ROAD");
+        emergencyStop();
+    }
 }
 
+// Sample sonar avoidance (unchanged)
 void Navigation::Sample_Sonar_Avoidance()
 {
     if (this->pWalker->pS2->distance < 100 || this->pWalker->pS3->distance < 100)
@@ -86,9 +112,9 @@ void Navigation::Sample_Sonar_Avoidance()
     }
 }
 
-// braking function
 void Navigation::emergencyStop()
 {
+    // Stop the wheels immediately
     this->pWalker->pWheelL->stopWheel();
     this->pWalker->pWheelR->stopWheel();
     delay(100);
@@ -100,12 +126,12 @@ void Navigation::emergencyStop()
     delay(5000);
 }
 
-// Haptic pulse patterns
+// Haptic pulse patterns (unchanged)
 void Navigation::pulseHaptic(int urgency, char direction)
 {
     int delayTime;
 
-    // Determine freq to buzz haptic
+    // Determine frequency of haptic pulses based on urgency
     switch (urgency)
     {
     case 1:
@@ -148,14 +174,13 @@ void Navigation::pulseHaptic(int urgency, char direction)
     }
 }
 
-// Veer walker
+// Veer function (unchanged, uses pivot)
 void Navigation::veer(float aspect, char direction)
 {
-    // Stop Wheels
     this->pWalker->pWheelL->stopWheel();
     this->pWalker->pWheelR->stopWheel();
 
-    // Pivot
+    // Pivot to desired direction
     pivot(aspect, direction);
 
     // Move forward till object is out of way
@@ -171,35 +196,28 @@ void Navigation::veer(float aspect, char direction)
         {
             this->pWalker->pS3->updateDistance();
         }
-        break;
-    case 'R':
+    }
+    else
+    {
+        this->pWalker->pWheelL->startWheel(350, 'F');
+        this->pWalker->pWheelR->startWheel(350, 'F');
         while (this->pWalker->pS2->distance < 100)
         {
             this->pWalker->pS2->updateDistance();
         }
-        break;
-    default:
-        break;
-
-        // Stop wheels
-        this->pWalker->pWheelL->stopWheel();
-        this->pWalker->pWheelR->stopWheel();
     }
 
-    // Pivot back
-    aspect = -aspect;
-    if (direction == 'L')
-        direction == 'R';
-    else
-        direction == 'L';
-    pivot(aspect, direction);
+    // Stop and pivot back
+    this->pWalker->pWheelL->stopWheel();
+    this->pWalker->pWheelR->stopWheel();
+    pivot(-aspect, direction == 'L' ? 'R' : 'L');
 
     // Retart wheels
     this->pWalker->pWheelL->startWheel(this->pWalker->curSpeed, 'F');
     this->pWalker->pWheelR->startWheel(this->pWalker->curSpeed + this->pWalker->curOffset, 'F');
 }
 
-// Routine to stop and pivot the walker by [aspect] degrees
+// Pivot function (unchanged)
 void Navigation::pivot(float aspect, char direction)
 {
     float initAngle = this->pWalker->pIMU->yaw;
@@ -251,4 +269,16 @@ void Navigation::saveNewFrame()
     frames[4] = newFrame;
 }
 
-
+void Navigation::tiltWarning()
+{
+    if (this->pWalker->pImu->roll > 1)
+    {
+        // print to network
+        this->pNetworking->pushSerialData("You are leaning too heavily to the right. Please don't tip the rollator.\n");
+    }
+    if (this->pWalker->pImu->roll < -1)
+    {
+        // print to network
+        this->pNetworking->pushSerialData("You are leaning too heavily to the left. Please don't tip the rollator.\n");
+    }
+}

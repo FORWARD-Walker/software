@@ -7,6 +7,8 @@
 #include "Wheel.h"
 #include "Potentiometer.h"
 #include "Camera.h"
+#include "Headlight.h"
+#include "Photoresistor.h"
 #include "Networking.h"
 
 // Walker structure
@@ -15,7 +17,11 @@ class Walker
 public:
   Walker(Networking *pNetworking); // Constructor
 
-  int curSpeed;  // Track current speed
+  std::vector<double> forward; // APF direction vector
+  void steer();                // Determines motor differential speed based on the APF direction vector
+
+  int curSpeedL; // left wheel speed command
+  int curSpeedR; // right wheel speed command
   int curOffset; // Track Current right wheel offset
 
   // Sensor Objects
@@ -40,6 +46,12 @@ public:
 
   // Camera Object
   Camera *pCamera;
+
+  // Headlight
+  Headlight *pLight;
+
+  // Photoresistor
+  Photoresistor *pPhoto;
 };
 
 #endif
