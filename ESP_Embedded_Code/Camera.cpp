@@ -2,7 +2,8 @@
 #include <cmath>
 
 // Camera constructor
-Camera::Camera() {
+Camera::Camera()
+{
     this->camXnorm = 0;
     this->camYnorm = 0;
     this->magnitude = 0;

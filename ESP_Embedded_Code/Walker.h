@@ -5,11 +5,6 @@
 #include "Imu.h"
 #include "Haptic.h"
 #include "Wheel.h"
-<<<<<<< HEAD
-#include "Photoresistor.h"
-#include "Headlight.h"
-=======
->>>>>>> c1d598513231ec9bc353e0b29ce822f0b40b9f1e
 #include "Potentiometer.h"
 
 // Walker structure
@@ -18,7 +13,11 @@ class Walker
 public:
   Walker(); // Constructor
 
-  int curSpeed;  // Track current speed
+  std::vector<double> forward; // APF direction vector
+  void steer(); // Determines motor differential speed based on the APF direction vector
+
+  int curSpeedL;  // left wheel speed command
+  int curSpeedR;  // right wheel speed command
   int curOffset; // Track Current right wheel offset
 
   // Sensor Objects

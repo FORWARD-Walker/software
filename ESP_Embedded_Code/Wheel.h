@@ -19,7 +19,7 @@ public:
     
     // State Variables
     bool spinning;
-    int curDirection; // -1 is resverse, 0 it not moving, 1 is forward
+    int curDirection; // -1 is reverse, 0 it not moving, 1 is forward
     int curSpeed;
 };
 

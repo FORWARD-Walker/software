@@ -1,5 +1,6 @@
 #include "Navigation.h"
 #include "Constants.h"
+#include "Field.h"
 
 // Navigation constructor
 Navigation::Navigation(Walker *pWalker, Camera *pCamera)
@@ -12,6 +13,7 @@ Navigation::Navigation(Walker *pWalker, Camera *pCamera)
 // P-Field Algorithm
 //////////////////////////////////////////////////////////////////////////////////////////////
 
+    Field::calculateRepulsion
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 

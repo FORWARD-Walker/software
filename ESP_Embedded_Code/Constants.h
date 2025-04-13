@@ -20,4 +20,15 @@
 #define SPEED_1_RIGHT_WHEEL_OFFSET 20
 #define SPEED_2_RIGHT_WHEEL_OFFSET 30
 
+// Camera Constants
+#define FOCAL_LENGTH 22       // mm
+#define PRINCIPAL_POINT_X 960 // pixel
+#define PRINCIPAL_POINT_Y 540 // pixel
+#define CAM_RESOLUTION_X 1920 // pixel
+#define CAM_RESOLUTION_Y 1080 // pixel
+
+// Artificial Potential Field, Downsampled
+#define APF_WIDTH = 192; // Example width
+#define APF_HEIGHT = 108; // Example height
+
 #endif

@@ -3,11 +3,7 @@
 
 // Includes
 #include <array>
-
-// Constant defines
-#define FOCAL_LENGTH 22       // mm
-#define PRINCIPAL_POINT_X 960 // pixel
-#define PRINCIPAL_POINT_Y 540 // pixel
+#include "Constants.h"
 
 class Camera {
 private:
