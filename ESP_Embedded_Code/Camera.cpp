@@ -1,16 +1,100 @@
 #include "Camera.h"
 #include <cmath>
 
-std::array<double, 3> pixel2los(double i, double j)
+Camera::Camera(Networking *pNetworking)
 {
-    // calculate normalized camera coordinates
-    double camXnorm = (i - PRINCIPAL_POINT_X) / FOCAL_LENGTH;
-    double camYnorm = (j - PRINCIPAL_POINT_Y) / FOCAL_LENGTH;
+    this->pNetworking = pNetworking;
+    this->objCount = 0;
+}
 
-    // form LOS vector
-    std::array<double, 3> rLOScam = {camXnorm, camYnorm, 1.0};
+void Camera::update()
+{
+    char temp[1024];
+    pNetworking->getUDPPacket(temp, sizeof(temp));
+    String camDataStr = String(temp);
 
-    double magnitude = std::sqrt(rLOScam[0] * rLOScam[0] + rLOScam[1] * rLOScam[1] + rLOScam[2] * rLOScam[2]);
+    // Clear old data
+    this->objects.clear();
 
-    return {rLOScam[0] / magnitude, rLOScam[1] / magnitude, rLOScam[2] / magnitude};
+    int pos = 0;
+    int newlineIndex = camDataStr.indexOf('\n', pos);
+    if (newlineIndex == -1)
+    {
+        newlineIndex = camDataStr.length();
+    }
+
+    // Parse the first line to extract the object count
+    String firstLine = camDataStr.substring(pos, newlineIndex);
+    int colonIndex = firstLine.indexOf(':');
+    int expectedCount = 0;
+
+    if (colonIndex != -1)
+    {
+        String countStr = firstLine.substring(colonIndex + 1);
+        countStr.trim();
+        expectedCount = countStr.toInt();
+    }
+
+    // Process remaining lines for each object
+    pos = newlineIndex + 1;
+    while (pos < camDataStr.length())
+    {
+        newlineIndex = camDataStr.indexOf('\n', pos);
+        if (newlineIndex == -1)
+        {
+            newlineIndex = camDataStr.length();
+        }
+
+        String line = camDataStr.substring(pos, newlineIndex);
+        line.trim();
+
+        if (line.startsWith("Object:"))
+        {
+            String data = line.substring(7);
+            data.trim();
+
+            int firstComma = data.indexOf(',');
+            if (firstComma == -1)
+                break;
+
+            Camera_Data_Struct obj;
+            obj.name = data.substring(0, firstComma);
+            obj.name.trim();
+
+            int posNum = firstComma + 1;
+            int comma = data.indexOf(',', posNum);
+            if (comma == -1)
+                break;
+            obj.x1 = data.substring(posNum, comma).toInt();
+
+            posNum = comma + 1;
+            comma = data.indexOf(',', posNum);
+            if (comma == -1)
+                break;
+            obj.x2 = data.substring(posNum, comma).toInt();
+
+            posNum = comma + 1;
+            comma = data.indexOf(',', posNum);
+            if (comma == -1)
+                break;
+            obj.y1 = data.substring(posNum, comma).toInt();
+
+            posNum = comma + 1;
+            obj.y2 = data.substring(posNum).toInt();
+
+            // Store the parsed object
+            this->objects.push_back(obj);
+        }
+
+        pos = newlineIndex + 1;
+    }
+
+    // Update actual object count
+    this->objCount = this->objects.size();
+
+    // Optional: Validate against expectedCount
+    if (expectedCount != objCount)
+    {
+        Serial.printf("[WARNING] Expected %d objects, but parsed %d.\n", expectedCount, objCount);
+    }
 }

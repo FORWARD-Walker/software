@@ -5,29 +5,41 @@
 #include "Imu.h"
 #include "Haptic.h"
 #include "Wheel.h"
+#include "Potentiometer.h"
+#include "Camera.h"
+#include "Networking.h"
 
 // Walker structure
 class Walker
 {
-  public:
-    Walker(bool useSonar, bool useImu, bool useHaptics, bool useWheels); // Constructor
+public:
+  Walker(Networking *pNetworking); // Constructor
 
-    // Sensor Objects
-    Sonar *pS1;
-    Sonar *pS2;
-    Sonar *pS3;
-    Sonar *pS4;
+  int curSpeed;  // Track current speed
+  int curOffset; // Track Current right wheel offset
 
-    // IMU Object
-    Imu *pIMU;
+  // Sensor Objects
+  Sonar *pS1;
+  Sonar *pS2;
+  Sonar *pS3;
+  Sonar *pS4;
 
-    // Haptic Objects
-    Haptic *pHapticL;
-    Haptic *pHapticR;
+  // IMU Object
+  Imu *pIMU;
 
-    // Wheel Objects
-    Wheel *pWheelL;
-    Wheel *pWheelR;
+  // Haptic Objects
+  Haptic *pHapticL;
+  Haptic *pHapticR;
+
+  // Wheel Objects
+  Wheel *pWheelL;
+  Wheel *pWheelR;
+
+  // Potentiometer Object
+  Potentiometer *pPotentiometer;
+
+  // Camera Object
+  Camera *pCamera;
 };
 
 #endif

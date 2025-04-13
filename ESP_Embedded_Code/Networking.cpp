@@ -1,8 +1,5 @@
 #include "Networking.h"
 
-#define IP_ADDR "192.168.4.107"
-#define PORT 12345
-
 // Create object
 Networking::Networking() : server(80)
 {
@@ -31,7 +28,7 @@ void Networking::setup()
 void Networking::getUDPPacket(char *data, size_t dataSize)
 {
     // Assert bit to signal receive a packet
-    udp.beginPacket(IP_ADDR, PORT);
+    udp.beginPacket(CAM_IP_ADDR, PORT);
     uint8_t rxFG = 1;
     udp.write(rxFG);
     udp.endPacket();
@@ -45,6 +42,7 @@ void Networking::getUDPPacket(char *data, size_t dataSize)
         if (len > 0)
         {
             data[len] = '\0';
+            Serial.println(data);
             return; // Exit on successful read
         }
     }
@@ -64,6 +62,12 @@ void Networking::handleRoot()
 void Networking::pushSerialData(String data)
 {
     this->dataBuffer = data + "\n" + this->dataBuffer; // Append new data with a newline
+}
+
+// Clear Serial data
+void Networking::clearSerialData()
+{
+    this->dataBuffer = ""; // Append new data with a newline
 }
 
 // Update server
