@@ -8,9 +8,14 @@
 #define ROLLATOR_WIDTH 500     // mm
 
 // Speed Constants
-#define SPEED_1 325
-#define SPEED_2 350
-#define SPEED_1_RIGHT_WHEEL_OFFSET 20
+#define SPEED_1 350
+#define SPEED_2 380
+#define SPEED_1_RIGHT_WHEEL_OFFSET 30
 #define SPEED_2_RIGHT_WHEEL_OFFSET 30
+#define CROWD_THROTTLE_VALUE 50
+
+// Navigation Constants
+#define SONAR_FRONT_SAFEZONE 50
+#define SONAR_SIDE_SAFEZONE 30
 
 #endif

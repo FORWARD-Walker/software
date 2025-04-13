@@ -23,6 +23,7 @@ public:
     void setup();                                   // Setup function
     void getUDPPacket(char *data, size_t dataSize); // Read UDP
     void pushSerialData(String data);
+    void clearSerialData();
     void handleRoot();
     void update();
 };

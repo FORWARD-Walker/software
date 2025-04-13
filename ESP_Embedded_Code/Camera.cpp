@@ -4,6 +4,7 @@
 Camera::Camera(Networking *pNetworking)
 {
     this->pNetworking = pNetworking;
+    this->objCount = 0;
 }
 
 void Camera::update()
@@ -11,8 +12,9 @@ void Camera::update()
     char temp[1024];
     pNetworking->getUDPPacket(temp, sizeof(temp));
     String camDataStr = String(temp);
-    
-    this->objCount = 0;
+
+    // Clear old data
+    this->objects.clear();
 
     int pos = 0;
     int newlineIndex = camDataStr.indexOf('\n', pos);
@@ -24,11 +26,13 @@ void Camera::update()
     // Parse the first line to extract the object count
     String firstLine = camDataStr.substring(pos, newlineIndex);
     int colonIndex = firstLine.indexOf(':');
+    int expectedCount = 0;
+
     if (colonIndex != -1)
     {
         String countStr = firstLine.substring(colonIndex + 1);
         countStr.trim();
-        this->objCount = countStr.toInt();
+        expectedCount = countStr.toInt();
     }
 
     // Process remaining lines for each object
@@ -40,21 +44,18 @@ void Camera::update()
         {
             newlineIndex = camDataStr.length();
         }
+
         String line = camDataStr.substring(pos, newlineIndex);
         line.trim();
 
         if (line.startsWith("Object:"))
         {
-            // Remove the "Object:" prefix
             String data = line.substring(7);
             data.trim();
 
-            // Parse the object's name and coordinates using commas as delimiters
             int firstComma = data.indexOf(',');
             if (firstComma == -1)
-            {
                 break;
-            }
 
             Camera_Data_Struct obj;
             obj.name = data.substring(0, firstComma);
@@ -80,7 +81,20 @@ void Camera::update()
 
             posNum = comma + 1;
             obj.y2 = data.substring(posNum).toInt();
+
+            // Store the parsed object
+            this->objects.push_back(obj);
         }
+
         pos = newlineIndex + 1;
+    }
+
+    // Update actual object count
+    this->objCount = this->objects.size();
+
+    // Optional: Validate against expectedCount
+    if (expectedCount != objCount)
+    {
+        Serial.printf("[WARNING] Expected %d objects, but parsed %d.\n", expectedCount, objCount);
     }
 }

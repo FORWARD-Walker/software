@@ -2,9 +2,15 @@
 #define NAVIGATION_H
 
 #include "Walker.h"
-#include "FixedQueue.h"
-#include <queue>
+#include "Enviroment.h"
 #include <Arduino.h>
+
+struct Frame
+{
+    std::vector<int> xPPs;
+    std::vector<int> yPPs;
+    std::vector<String> object_names;
+};
 
 // Walker structure
 class Navigation
@@ -13,15 +19,20 @@ class Navigation
 private:
     void pivot(float aspect, char direction);
     void veer(float aspect, char direction);
-
-public:
-    Navigation(Walker *pWalker); // Constructor
-    void Sample_Sonar_Avoidance();
     void emergencyStop();
     void pulseHaptic(int urgency, char direction);
-    void setSpeed();
 
-    Walker *pWalker; // Walker Pointer
+public:
+    Navigation(Walker *pWalker, Enviroment* pEnviroment); // Constructor
+    void Sample_Sonar_Avoidance();
+    void navigate();
+    void setSpeed();
+    void saveNewFrame();
+
+    Walker *pWalker;         // Walker Pointer
+    Enviroment *pEnviroment; // Enviroment Pointer
+
+    Frame frames[5]; // 5 Frames of enviroment
 };
 
 #endif

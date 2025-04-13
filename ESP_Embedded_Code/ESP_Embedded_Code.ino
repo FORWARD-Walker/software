@@ -12,13 +12,17 @@
 #include "Constants.h"
 #include "Navigation.h"
 #include "Walker.h"
+#include "Enviroment.h"
 #include "Pins.h"
+
+// Network Ref
+Networking* pNetworking = nullptr;
 
 // Walker structure
 Walker* pWalker = nullptr;
 
-// Network Ref
-Networking* pNetworking = nullptr;
+// Enviroment object
+Enviroment* pEnviroment = nullptr;
 
 // Navigation Ref
 Navigation* pNavigation = nullptr;
@@ -77,8 +81,12 @@ void setup()
   pWalker = new Walker(pNetworking);
   pNetworking->pushSerialData("Walker Initialized!\n");
 
+  // Init Enviroment
+  pEnviroment = new Enviroment(pWalker, pNetworking);
+  pNetworking->pushSerialData("Enviroment Initialized!\n");
+
   // Init Navigation
-  pNavigation = new Navigation(pWalker);
+  pNavigation = new Navigation(pWalker, pEnviroment);
   pNetworking->pushSerialData("Navigation Initialized!\n");
 }
 
@@ -86,17 +94,18 @@ void setup()
 void loop()
 { 
 
-  // 30 HZ ISR
-  if(Timer_30HZ_FG)
-  {
+if (Timer_30HZ_FG)
+{
     Timer_30HZ_FG = false; // Reset ISR
-  }
+}
+
 
   // 10 HZ ISR
   if(Timer_10HZ_FG)
   {
-    // Check Speed
-    pNavigation->setSpeed();
+    pNavigation->setSpeed(); // Poll to adjust speed based on potentiometer
+    pEnviroment->updateEnviroment(); // Update enviroment data
+    pNavigation->navigate(); // Navigate
 
     Timer_10HZ_FG = false; // Reset ISR
   }
@@ -106,26 +115,6 @@ void loop()
   {
     // Blink Heartbeat
     Blink_Heartbeat();
-    pWalker->pCamera->update();
-    String sensorData = "Object Count: ";
-    sensorData += pWalker->pCamera->objCount;
-    sensorData += "\n";
-    for(int i = 0; i < pWalker->pCamera->objCount; i++)
-      {
-        sensorData += "Object: ";
-        sensorData += pWalker->pCamera->objects[i].name;
-        sensorData += " [x1: ";
-        sensorData += pWalker->pCamera->objects[i].x1;
-        sensorData += " x2: ";
-        sensorData += pWalker->pCamera->objects[i].x2;
-        sensorData += " y1: ";
-        sensorData += pWalker->pCamera->objects[i].y1;
-        sensorData += " y2: ";
-        sensorData += pWalker->pCamera->objects[i].y2;
-        sensorData += "]\n";
-      }
-    pNetworking->pushSerialData(sensorData);
-    pNetworking->update();
 
     Timer_1HZ_FG = false;  // Reset ISR
   }

@@ -16,6 +16,8 @@ void Wheel::setup()
 {
     pinMode(this->motorPinForward, OUTPUT);
     pinMode(this->motorPinReverse, OUTPUT);
+    analogWrite(this->motorPinForward, LOW);
+    analogWrite(this->motorPinReverse, LOW);
 }
 
 void Wheel::startWheel(int speed, char direction)

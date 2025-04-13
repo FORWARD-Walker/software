@@ -42,6 +42,7 @@ void Networking::getUDPPacket(char *data, size_t dataSize)
         if (len > 0)
         {
             data[len] = '\0';
+            Serial.println(data);
             return; // Exit on successful read
         }
     }
@@ -61,6 +62,12 @@ void Networking::handleRoot()
 void Networking::pushSerialData(String data)
 {
     this->dataBuffer = data + "\n" + this->dataBuffer; // Append new data with a newline
+}
+
+// Clear Serial data
+void Networking::clearSerialData()
+{
+    this->dataBuffer = ""; // Append new data with a newline
 }
 
 // Update server

@@ -2,37 +2,69 @@
 #include "Constants.h"
 
 // Navigation Algorithms and Helper functions
-Navigation::Navigation(Walker *pWalker)
+Navigation::Navigation(Walker *pWalker, Enviroment *pEnviroment)
 {
     this->pWalker = pWalker;
+    this->pEnviroment = pEnviroment;
+}
+
+void Navigation::navigate()
+{
+    // Check Safe zone
+    if (this->pEnviroment->safezoneViolation)
+    {
+        this->pWalker->pWheelL->stopWheel();
+        this->pWalker->pWheelR->stopWheel();
+        pulseHaptic(3, 'R');
+        pulseHaptic(3, 'L');
+        pulseHaptic(3, 'R');
+        pulseHaptic(3, 'L');
+        pulseHaptic(3, 'R');
+        pulseHaptic(3, 'L');
+    }
+    // Check Road
+    else if (this->pEnviroment->road)
+    {
+        this->emergencyStop();
+    }
+    // Check crowd
+    else if (this->pEnviroment->crowd)
+    {
+        this->pWalker->pWheelL->startWheel(this->pWalker->curSpeed - CROWD_THROTTLE_VALUE, 'F');
+        this->pWalker->pWheelR->startWheel(this->pWalker->curSpeed + this->pWalker->curOffset - CROWD_THROTTLE_VALUE, 'F');
+    }
+
 }
 
 // Determine Potentiometer Speed
 void Navigation::setSpeed()
 {
-    this->pWalker->pPotentiometer->readValue();
-    int potVal = this->pWalker->pPotentiometer->value;
-    if (potVal > 3500)
+    if(!pEnviroment->safezoneViolation && !pEnviroment->crowd && !pEnviroment->road)
     {
-        this->pWalker->pWheelL->stopWheel();
-        this->pWalker->pWheelR->stopWheel();
-        this->pWalker->curSpeed = 0;
-        this->pWalker->curOffset = 0;
-    }
-    else if (potVal > 1000)
-    {
-        this->pWalker->curSpeed = SPEED_1;
-        this->pWalker->curOffset = SPEED_1_RIGHT_WHEEL_OFFSET;
-        this->pWalker->pWheelL->startWheel(this->pWalker->curSpeed, 'F');
-        this->pWalker->pWheelR->startWheel(this->pWalker->curSpeed + this->pWalker->curOffset, 'F');
-    }
-    else
-    {
-        this->pWalker->curSpeed = SPEED_2;
-        this->pWalker->curOffset = SPEED_2_RIGHT_WHEEL_OFFSET;
-        this->pWalker->pWheelL->startWheel(this->pWalker->curSpeed, 'F');
-        this->pWalker->pWheelR->startWheel(this->pWalker->curSpeed + this->pWalker->curOffset, 'F');
-    }
+      this->pWalker->pPotentiometer->readValue();
+      int potVal = this->pWalker->pPotentiometer->value;
+      if (potVal > 3500)
+      {
+          this->pWalker->pWheelL->stopWheel();
+          this->pWalker->pWheelR->stopWheel();
+          this->pWalker->curSpeed = 0;
+          this->pWalker->curOffset = 0;
+      }
+      else if (potVal > 1000)
+      {
+          this->pWalker->curSpeed = SPEED_1;
+          this->pWalker->curOffset = SPEED_1_RIGHT_WHEEL_OFFSET;
+          this->pWalker->pWheelL->startWheel(this->pWalker->curSpeed, 'F');
+          this->pWalker->pWheelR->startWheel(this->pWalker->curSpeed + this->pWalker->curOffset, 'F');
+      }
+      else
+      {
+          this->pWalker->curSpeed = SPEED_2;
+          this->pWalker->curOffset = SPEED_2_RIGHT_WHEEL_OFFSET;
+          this->pWalker->pWheelL->startWheel(this->pWalker->curSpeed, 'F');
+          this->pWalker->pWheelR->startWheel(this->pWalker->curSpeed + this->pWalker->curOffset, 'F');
+      }
+  }
 }
 
 void Navigation::Sample_Sonar_Avoidance()
@@ -65,6 +97,7 @@ void Navigation::emergencyStop()
     delay(100);
     this->pWalker->pWheelL->stopWheel();
     this->pWalker->pWheelR->stopWheel();
+    delay(5000);
 }
 
 // Haptic pulse patterns
@@ -194,3 +227,28 @@ void Navigation::pivot(float aspect, char direction)
         this->pWalker->pWheelL->stopWheel();
     }
 }
+
+// Save Frame
+void Navigation::saveNewFrame()
+{
+    // Shift older frames
+    for (int i = 0; i < 4; i++)
+    {
+        frames[i] = frames[i + 1];
+    }
+
+    // Create and store the newest frame
+    Frame newFrame;
+
+    // Pull data from pEnviroment
+    newFrame.xPPs = pEnviroment->xPPs;
+    newFrame.yPPs = pEnviroment->yPPs;
+
+    // Store object names from camera
+    newFrame.object_names = pEnviroment->object_names;
+
+    // Assign the new frame to the last index
+    frames[4] = newFrame;
+}
+
+
