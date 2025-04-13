@@ -1,7 +1,7 @@
 #include <Pins.h>
 #include "Headlight.h"
 
-void Headlight::Headlight(int lightPin)
+Headlight::Headlight(int lightPin)
 {
     this->lightPin = lightPin;
     this->setup();

@@ -1,7 +1,7 @@
 #include <Pins.h>
 #include "Photoresistor.h"
 
-void Photoresistor::Photoresistor(int photoresPin, int resolution)
+Photoresistor::Photoresistor(int photoresPin, int resolution)
 {
     this->photoresPin = photoresPin;
     this->resolution = resolution;

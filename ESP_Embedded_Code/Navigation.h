@@ -2,7 +2,7 @@
 #define NAVIGATION_H
 
 #include "Walker.h"
-#include "Enviroment.h"
+#include "Environment.h"
 #include "Networking.h"
 #include <Arduino.h>
 
@@ -24,17 +24,19 @@ private:
     void pulseHaptic(int urgency, char direction);
 
 public:
-    Navigation(Walker *pWalker, Networking *pNetworking, Enviroment *pEnviroment); // Constructor
+    Navigation(Walker *pWalker, Networking *pNetworking, Environment *pEnvironment); // Constructor
     void Sample_Sonar_Avoidance();
     void navigate();
     void setSpeed();
+    void steer(std::vector<double> direction_vector, int speed);
     void saveNewFrame();
+    void tiltWarning();
 
-    Walker *pWalker;         // Walker Pointer
-    Networking *pNetworking; // Network pointer
-    Enviroment *pEnviroment; // Enviroment Pointer
+    Walker *pWalker;           // Walker Pointer
+    Networking *pNetworking;   // Network pointer
+    Environment *pEnvironment; // Environment Pointer
 
-    Frame frames[5]; // 5 Frames of enviroment
+    Frame frames[5]; // 5 Frames of Environment
 };
 
 #endif

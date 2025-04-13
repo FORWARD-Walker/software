@@ -12,7 +12,7 @@
 #include "Constants.h"
 #include "Navigation.h"
 #include "Walker.h"
-#include "Enviroment.h"
+#include "Environment.h"
 #include "Pins.h"
 
 // Network Ref
@@ -21,8 +21,8 @@ Networking* pNetworking = nullptr;
 // Walker structure
 Walker* pWalker = nullptr;
 
-// Enviroment object
-Enviroment* pEnviroment = nullptr;
+// Environment object
+Environment* pEnvironment = nullptr;
 
 // Navigation Ref
 Navigation* pNavigation = nullptr;
@@ -81,12 +81,12 @@ void setup()
   pWalker = new Walker(pNetworking);
   pNetworking->pushSerialData("Walker Initialized!\n");
 
-  // Init Enviroment
-  pEnviroment = new Enviroment(pWalker, pNetworking);
-  pNetworking->pushSerialData("Enviroment Initialized!\n");
+  // Init Environment
+  pEnvironment = new Environment(pWalker, pNetworking);
+  pNetworking->pushSerialData("Environment Initialized!\n");
 
   // Init Navigation
-  pNavigation = new Navigation(pWalker, pNetworking, pEnviroment);
+  pNavigation = new Navigation(pWalker, pNetworking, pEnvironment);
   pNetworking->pushSerialData("Navigation Initialized!\n");
 }
 
@@ -104,8 +104,7 @@ if (Timer_30HZ_FG)
   if(Timer_10HZ_FG)
   {
     pNavigation->setSpeed(); // Poll to adjust speed based on potentiometer
-    pEnviroment->updateEnviroment(); // Update enviroment data
-    pNavigation->navigate(); // Navigate
+
 
     Timer_10HZ_FG = false; // Reset ISR
   }
@@ -114,6 +113,8 @@ if (Timer_30HZ_FG)
   if(Timer_1HZ_FG)
   {
     // Blink Heartbeat
+    pEnvironment->updateEnvironment(); // Update Environment data
+    pNavigation->navigate(); // Navigate
     Blink_Heartbeat();
 
     Timer_1HZ_FG = false;  // Reset ISR

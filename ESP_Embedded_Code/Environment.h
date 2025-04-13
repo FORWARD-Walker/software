@@ -1,18 +1,40 @@
-#ifndef PHOTORESISTOR_H
-#define PHOTORESISTOR_H
+#ifndef ENVIRONMENT_H
+#define ENVIRONMENT_H
 
-#include "Walker.h"
 #include <Arduino.h>
+#include "Walker.h"
+#include "Networking.h"
+#include "Constants.h"
 
-class Environment {
+class Environment
+{
 private:
-    
+    void detectRoad();
+    void detectCrowd();
+    void detectSafeZoneViolation();
+    void updateFrame();
 
 public:
-    Environment(Walker *pWalker); // Constructor
+    // Constructor
+    Environment(Walker *pWalker, Networking *pNetworking);
+
+    // Functions
+    void updateEnvironment();
+    void postEnvironmentData();
+
+    // Attributes
     Walker *pWalker;
+    Networking *pNetworking;
 
-    void headlightSwitch()
-    void stabilityInclineDecline()
+    // Flags
+    bool safezoneViolation;
+    bool crowd;
+    bool road;
 
+    // Data
+    std::vector<int> xPPs;
+    std::vector<int> yPPs;
+    std::vector<String> object_names;
 };
+
+#endif

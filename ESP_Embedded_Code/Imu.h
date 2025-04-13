@@ -29,11 +29,6 @@ public:
     float posx;
     float posy;
     float posz;
-
-    float origin[3];
-    float currPos[3];
-    float prevPos1[3];
-    float prevPos2[3];
 };
 
 #endif

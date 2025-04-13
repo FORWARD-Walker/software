@@ -3,13 +3,14 @@
 
 #include <Arduino.h>
 
-class Photoresistor {
+class Photoresistor
+{
 private:
     int photoresPin; // Pin connected to the photoresistor
     int resolution;  // ADC resolution
     int value;       // Current value read from the photoresistor
 
-    void setup();    // Private method to initialize the photoresistor
+    void setup(); // Private method to initialize the photoresistor
 
 public:
     // Constructor

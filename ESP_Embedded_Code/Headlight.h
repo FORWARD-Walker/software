@@ -7,8 +7,11 @@
 class Headlight
 {
 public:
+    Headlight(int lightPin);
     void setup();
     void control(int threshold, int sensorValue);
+
+    int lightPin;
 };
 
 #endif

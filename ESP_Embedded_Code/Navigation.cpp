@@ -1,19 +1,18 @@
 #include "Navigation.h"
 #include "Constants.h"
-#include "Field.h"
 
 // Navigation Algorithms and Helper functions
-Navigation(Walker *pWalker, Networking *pNetworking, Enviroment *pEnviroment)
+Navigation::Navigation(Walker *pWalker, Networking *pNetworking, Environment *pEnvironment)
 {
     this->pWalker = pWalker;
     this->pNetworking = pNetworking;
-    this->pEnviroment = pEnviroment;
+    this->pEnvironment = pEnvironment;
 }
 
 void Navigation::navigate()
 {
     // Check Safe zone
-    if (this->pEnviroment->safezoneViolation)
+    if (this->pEnvironment->safezoneViolation)
     {
         this->pWalker->pWheelL->stopWheel();
         this->pWalker->pWheelR->stopWheel();
@@ -25,26 +24,40 @@ void Navigation::navigate()
         pulseHaptic(3, 'L');
     }
     // Check Road
-    else if (this->pEnviroment->road)
+    else if (this->pEnvironment->road)
     {
         this->emergencyStop();
     }
     // Check crowd
-    else if (this->pEnviroment->crowd)
+    else if (this->pEnvironment->crowd)
     {
-        this->pWalker->pWheelL->startWheel(this->pWalker->curSpeed - CROWD_THROTTLE_VALUE, 'F');
-        this->pWalker->pWheelR->startWheel(this->pWalker->curSpeed + this->pWalker->curOffset - CROWD_THROTTLE_VALUE, 'F');
+        this->pWalker->pWheelL->startWheel(this->pWalker->curSpeedL - CROWD_THROTTLE_VALUE, 'F');
+        this->pWalker->pWheelR->startWheel(this->pWalker->curSpeedR - CROWD_THROTTLE_VALUE, 'F');
     }
+
+    // Navigate user through world
+    this->saveNewFrame(); // update data
+    for (int i = 0; i < 5; i++)
+    {
+        this->pNetworking->pushSerialData("Frame: ");
+        Frame frame = this->frames[i];
+        for (int j = 0; j < frame.object_names.size(); j++)
+        {
+            String framestr = "Object: " + frame.object_names.at(i) + "Xpp: " + frame.xPPs.at(i) + "Ypp: " + frame.yPPs.at(i) + "\n";
+            this->pNetworking->pushSerialData(framestr);
+        }
+    }
+    pNetworking->update();
+
+    //////////////////////////////////////////////////////////////////////////////////////////////
+    // P-Field Algorithm
+    //////////////////////////////////////////////////////////////////////////////////////////////
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////
-// P-Field Algorithm
-//////////////////////////////////////////////////////////////////////////////////////////////
-
-// ROAD & CROWD
-void Navigation::checkForObstacles()
+void Navigation::setSpeed()
 {
-    if (!pEnviroment->safezoneViolation && !pEnviroment->crowd && !pEnviroment->road)
+
+    if (!pEnvironment->safezoneViolation && !pEnvironment->crowd && !pEnvironment->road)
     {
         this->pWalker->pPotentiometer->readValue();
         int potVal = this->pWalker->pPotentiometer->value;
@@ -52,43 +65,26 @@ void Navigation::checkForObstacles()
         {
             this->pWalker->pWheelL->stopWheel();
             this->pWalker->pWheelR->stopWheel();
-            this->pWalker->curSpeed = 0;
+            this->pWalker->curSpeedL = 0;
+            this->pWalker->curSpeedR = 0;
             this->pWalker->curOffset = 0;
         }
         else if (potVal > 1000)
         {
-            this->pWalker->curSpeed = SPEED_1;
+            this->pWalker->curSpeedL = SPEED_1;
+            this->pWalker->curSpeedR = SPEED_1 + SPEED_1_RIGHT_WHEEL_OFFSET;
             this->pWalker->curOffset = SPEED_1_RIGHT_WHEEL_OFFSET;
-            this->pWalker->pWheelL->startWheel(this->pWalker->curSpeed, 'F');
-            this->pWalker->pWheelR->startWheel(this->pWalker->curSpeed + this->pWalker->curOffset, 'F');
+            this->pWalker->pWheelL->startWheel(this->pWalker->curSpeedL, 'F');
+            this->pWalker->pWheelR->startWheel(this->pWalker->curSpeedR, 'F');
         }
         else
         {
-            this->pWalker->curSpeed = SPEED_2;
+            this->pWalker->curSpeedL = SPEED_2;
+            this->pWalker->curSpeedR = SPEED_2 + SPEED_2_RIGHT_WHEEL_OFFSET;
             this->pWalker->curOffset = SPEED_2_RIGHT_WHEEL_OFFSET;
-            this->pWalker->pWheelL->startWheel(this->pWalker->curSpeed, 'F');
-            this->pWalker->pWheelR->startWheel(this->pWalker->curSpeed + this->pWalker->curOffset, 'F');
+            this->pWalker->pWheelL->startWheel(this->pWalker->curSpeedL, 'F');
+            this->pWalker->pWheelR->startWheel(this->pWalker->curSpeedR, 'F');
         }
-    }
-    std::map<std::string, int> obstacleCount; // Count occurrences of each type of obstacle
-
-    for (const Obstacle &obs : this->pCamera->getObstacles())
-    {
-        obstacleCount[obs.type]++;
-    }
-
-    // Check for three or more 'person'
-    if (obstacleCount["person"] >= 3)
-    {
-        Serial.println("CROWD");
-        emergencyStop();
-    }
-
-    // Check for three or more 'car'
-    if (obstacleCount["car"] >= 3)
-    {
-        Serial.println("ROAD");
-        emergencyStop();
     }
 }
 
@@ -187,8 +183,8 @@ void Navigation::veer(float aspect, char direction)
     switch (direction)
     {
         // Start Wheels
-        this->pWalker->pWheelL->startWheel(this->pWalker->curSpeed, 'F');
-        this->pWalker->pWheelR->startWheel(this->pWalker->curSpeed + this->pWalker->curOffset, 'F');
+        this->pWalker->pWheelL->startWheel(this->pWalker->curSpeedL, 'F');
+        this->pWalker->pWheelR->startWheel(this->pWalker->curSpeedR, 'F');
 
     // Wait for appropriate sensor to be no longer close range
     case 'L':
@@ -196,25 +192,30 @@ void Navigation::veer(float aspect, char direction)
         {
             this->pWalker->pS3->updateDistance();
         }
-    }
-    else
+        break;
+    case 'R':
     {
-        this->pWalker->pWheelL->startWheel(350, 'F');
-        this->pWalker->pWheelR->startWheel(350, 'F');
+        this->pWalker->pWheelL->startWheel(this->pWalker->curSpeedL, 'F');
+        this->pWalker->pWheelR->startWheel(this->pWalker->curSpeedR, 'F');
         while (this->pWalker->pS2->distance < 100)
         {
             this->pWalker->pS2->updateDistance();
         }
+        break;
+    }
+    default:
+        break;
+
+        // Stop and pivot back
+        this->pWalker->pWheelL->stopWheel();
+        this->pWalker->pWheelR->stopWheel();
     }
 
-    // Stop and pivot back
-    this->pWalker->pWheelL->stopWheel();
-    this->pWalker->pWheelR->stopWheel();
     pivot(-aspect, direction == 'L' ? 'R' : 'L');
 
     // Retart wheels
-    this->pWalker->pWheelL->startWheel(this->pWalker->curSpeed, 'F');
-    this->pWalker->pWheelR->startWheel(this->pWalker->curSpeed + this->pWalker->curOffset, 'F');
+    this->pWalker->pWheelL->startWheel(this->pWalker->curSpeedL, 'F');
+    this->pWalker->pWheelR->startWheel(this->pWalker->curSpeedR, 'F');
 }
 
 // Pivot function (unchanged)
@@ -226,7 +227,7 @@ void Navigation::pivot(float aspect, char direction)
     // Pivot Walker
     if (direction == 'L')
     {
-        this->pWalker->pWheelR->startWheel(this->pWalker->curSpeed + this->pWalker->curOffset, 'F');
+        this->pWalker->pWheelR->startWheel(this->pWalker->curSpeedR, 'F');
         while (fabs(deltaAngle) < aspect)
         {
             this->pWalker->pIMU->updateData();
@@ -236,7 +237,7 @@ void Navigation::pivot(float aspect, char direction)
     }
     else
     {
-        this->pWalker->pWheelL->startWheel(this->pWalker->curSpeed, 'F');
+        this->pWalker->pWheelL->startWheel(this->pWalker->curSpeedL, 'F');
         while (fabs(deltaAngle) < aspect)
         {
             this->pWalker->pIMU->updateData();
@@ -244,6 +245,17 @@ void Navigation::pivot(float aspect, char direction)
         }
         this->pWalker->pWheelL->stopWheel();
     }
+}
+
+// Invoke in Navigation.cpp to steer the Walker!! Use the potentiometer speed as argument 2
+void Navigation::steer(std::vector<double> direction_vector, int speed)
+{
+    this->pWalker->curSpeedL = static_cast<int>(direction_vector[0] * speed);
+    this->pWalker->curSpeedR = static_cast<int>(direction_vector[1] * speed);
+    this->pWalker->curSpeedR += this->pWalker->curOffset;
+
+    this->pWalker->pWheelL->startWheel(this->pWalker->curSpeedL, 'F');
+    this->pWalker->pWheelR->startWheel(this->pWalker->curSpeedR, 'F');
 }
 
 // Save Frame
@@ -258,12 +270,12 @@ void Navigation::saveNewFrame()
     // Create and store the newest frame
     Frame newFrame;
 
-    // Pull data from pEnviroment
-    newFrame.xPPs = pEnviroment->xPPs;
-    newFrame.yPPs = pEnviroment->yPPs;
+    // Pull data from pEnvironment
+    newFrame.xPPs = pEnvironment->xPPs;
+    newFrame.yPPs = pEnvironment->yPPs;
 
     // Store object names from camera
-    newFrame.object_names = pEnviroment->object_names;
+    newFrame.object_names = pEnvironment->object_names;
 
     // Assign the new frame to the last index
     frames[4] = newFrame;
@@ -271,12 +283,12 @@ void Navigation::saveNewFrame()
 
 void Navigation::tiltWarning()
 {
-    if (this->pWalker->pImu->roll > 1)
+    if (this->pWalker->pIMU->roll > 1)
     {
         // print to network
         this->pNetworking->pushSerialData("You are leaning too heavily to the right. Please don't tip the rollator.\n");
     }
-    if (this->pWalker->pImu->roll < -1)
+    if (this->pWalker->pIMU->roll < -1)
     {
         // print to network
         this->pNetworking->pushSerialData("You are leaning too heavily to the left. Please don't tip the rollator.\n");

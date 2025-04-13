@@ -48,10 +48,10 @@ public:
   Camera *pCamera;
 
   // Headlight
-  Headlight *pLight;
+  Headlight *pHeadlight;
 
   // Photoresistor
-  Photoresistor *pPhoto;
+  Photoresistor *pPhotoresistor;
 };
 
 #endif

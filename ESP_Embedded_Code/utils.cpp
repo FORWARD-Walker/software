@@ -6,14 +6,12 @@
 class utils
 {
 public:
-  static double distToObstacleX(double pixel_x_location)
+  static int distToObstacle(int pixel_location, char xory)
   {
-    return (pixel_x_location - PRINCIPAL_POINT_X);
-  }
-
-  static double distToObstacleY(double pixel_y_location)
-  {
-    return (pixel_y_location - PRINCIPAL_POINT_Y);
+    if (xory == 'X')
+      return (pixel_location - PRINCIPAL_POINT_X);
+    else
+      return (pixel_location - PRINCIPAL_POINT_Y);
   }
 
   // Calculate detection box area
@@ -22,14 +20,9 @@ public:
     return (y2 - y1) * (x2 - x1); // pixels
   }
 
-  static double obstacleCentroidX(float x2, float x1)
+  static int obstacleCentroid(int cor1, int cor2)
   {
-    return {(x2 + x1) / 2.0};
-  }
-
-  static double obstacleCentroidY(float y2, float y1)
-  {
-    return {(y2 + y1) / 2.0};
+    return {(cor2 + cor1) / 2};
   }
 
   // Convert pixel coordinates to line-of-sight (LOS) vector
@@ -53,5 +46,22 @@ public:
     rLOScam[0] /= magnitude;
     rLOScam[1] /= magnitude;
     rLOScam[2] /= magnitude;
+  }
+
+  // The way this works is that in navigation class, we will call this function to get the repulsion vector and then subtract
+  // it from the forward vector to get the new direction vector. then in walker class, we will call the steer function to get the new speed commands for the motors.
+  double calculateRepulsion(int cor1, int cor2, char xory)
+  {
+    // for amount of obstacles
+    int pixel_location = utils::obstacleCentroid(cor1, cor2);
+    int range = utils::distToObstacle(pixel_location, xory);
+
+    double repulsion = 0.0;
+    if (range > 0)
+    {                                  // Avoid division by zero
+      repulsion = K_REPULSION / range; // Larger repulsion as distance decreases
+    }
+
+    return repulsion;
   }
 };

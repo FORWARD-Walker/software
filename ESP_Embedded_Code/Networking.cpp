@@ -51,8 +51,8 @@ void Networking::getUDPPacket(char *data, size_t dataSize)
 // Handle new connection
 void Networking::handleRoot()
 {
-    String html = "<html><head><title>ESP32 Data</title></head><body>";
-    html += "<h1>Serial Data:</h1>";
+    String html = "<html><head><title>FORWARD Information Console</title></head><body>";
+    html += "<h1>FORWARD Notifcations:</h1>";
     html += "<pre>" + this->dataBuffer + "</pre>";
     html += "</body></html>";
     server.send(200, "text/html", html);

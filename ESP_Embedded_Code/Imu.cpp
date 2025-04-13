@@ -23,15 +23,6 @@ void Imu::setup()
         }
     }
     bno.setExtCrystalUse(true);
-
-    // Initialize position history and reference frame
-    for (int i=0; i<3; i++)
-    {
-        origin[i] = 0.0;
-        currPos[i] = 0.0;
-        prevPos1[i] = 0.0;
-        prevPos2[i] = 0.0;
-    }
 }
 
 // Simplified function to read Imu distance over I2C
@@ -57,11 +48,4 @@ void Imu::updateData()
     this->posy += vely * 1 / FREQ_UPDATE_DATA;
     this->posz += velz * 1 / FREQ_UPDATE_DATA;
 
-    // Update position history
-    for (int i=0; i<3; i++)
-    {
-        currPos[i] = { posx, posy, posz };
-        prevPos1[i] = currPos[i];
-        prevPos2[i] = prevPos[i];
-    }
 }

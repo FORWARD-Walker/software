@@ -7,7 +7,7 @@
 #define ROLLATOR_HALFWIDTH 250 // mm
 #define ROLLATOR_WIDTH 500     // mm
 
-#define FREQ_UPDATE_DATA 30    // Hz
+#define FREQ_UPDATE_DATA 30 // Hz
 
 #define IMU_I2C_ADDR 0x29 // IMU I2C addr
 #define IMU_DEV_ID 55
@@ -33,7 +33,8 @@
 #define CAM_RESOLUTION_Y 1080 // pixel
 
 // Artificial Potential Field, Downsampled
-#define APF_WIDTH = 192; // Example width
-#define APF_HEIGHT = 108; // Example height
+#define APF_WIDTH 192  // Example width
+#define APF_HEIGHT 108 // Example height
+#define K_REPULSION 1.0
 
 #endif

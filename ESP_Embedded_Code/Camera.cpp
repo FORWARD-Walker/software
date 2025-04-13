@@ -10,7 +10,7 @@ Camera::Camera(Networking *pNetworking)
 void Camera::update()
 {
     char temp[1024];
-    pNetworking->getUDPPacket(temp, sizeof(temp));
+    this->pNetworking->getUDPPacket(temp, sizeof(temp));
     String camDataStr = String(temp);
 
     // Clear old data
@@ -91,10 +91,4 @@ void Camera::update()
 
     // Update actual object count
     this->objCount = this->objects.size();
-
-    // Optional: Validate against expectedCount
-    if (expectedCount != objCount)
-    {
-        Serial.printf("[WARNING] Expected %d objects, but parsed %d.\n", expectedCount, objCount);
-    }
 }
