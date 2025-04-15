@@ -1,6 +1,8 @@
 #ifndef CONSTANTS_H
 #define CONSTANTS_H
 
+#include <cmath>
+
 // Object Avoidance Constants
 #define CAR_HALFWIDTH 1000     // mm
 #define PERSON_HALFWIDTH 200   // mm
@@ -33,8 +35,28 @@
 #define CAM_RESOLUTION_Y 1080 // pixel
 
 // Artificial Potential Field, Downsampled
-#define APF_WIDTH 192  // Example width
-#define APF_HEIGHT 108 // Example height
 #define K_REPULSION 1.0
+
+struct Vector2D {
+    double x, y;
+
+    Vector2D(double _x, double _y) : x(_x), y(_y) {}
+
+    Vector2D normalize() const {
+        double magnitude = std::sqrt(x * x + y * y);
+        return (magnitude > 0) ? Vector2D(x / magnitude, y / magnitude) : Vector2D(0, 0);
+    }
+};
+
+struct Vector3D {
+    double x, y, z;
+
+    Vector3D(double _x, double _y, double _z) : x(_x), y(_y), z(_z) {}
+
+    Vector3D normalize() const {
+        double magnitude = std::sqrt(x * x + y * y + z * z);
+        return (magnitude > 0) ? Vector3D(x / magnitude, y / magnitude, z / magnitude) : Vector3D(0, 0, 0);
+    }
+};
 
 #endif

@@ -1,6 +1,11 @@
 #include "Navigation.h"
 #include "Constants.h"
 
+#include <vector>
+
+std::vector<double> norm_rLOS_list;
+std::vector<double> distCam_list;
+
 // Navigation Algorithms and Helper functions
 Navigation::Navigation(Walker *pWalker, Networking *pNetworking, Environment *pEnvironment)
 {
@@ -50,11 +55,38 @@ void Navigation::navigate()
     this->pNetworking->update();
 
     //////////////////////////////////////////////////////////////////////////////////////////////
-    // P-Field Algorithm
+    // Artificial Potential Field Algorithm for multi-obstacle avoidance
+    // note** might want to increase update frequency
     //////////////////////////////////////////////////////////////////////////////////////////////
+    
+    // Iterate through all obstacles in view
+    for (int i = 0; i < frame.object_names.size(); i++) {
+        Vector2D rV_i = utils::repulsionVector(frame.xPPs(i), frame.yPPs(i)); // Calculate repulsion vector
+        rV_total.x += rV_i.x; // accumulate x-direction commands
+        rV_total.y += rV_i.y; // accumulate y-direction commands
+
+        Vector3D rLOS_i = utils::pixel2los(frame.xPPs(i), frame.yPPs(i)); // Calculate 3D LOS vector
+
+        double norm_rLOS_i = utils::mag3d(rLOS_i.normalize()); // Nornmalized 3D LOS vector
+
+        double distCam_i = utils::mag3d(rLOS_i); // Range estimate from camera to obstacle
+
+        norm_rLOS_list.push_back(norm_rLOS_i); // Store normalized LOS magnitudes
+        distCam_list.push_back(distCam_i); // Store distance estimates
+    }
+
+    Vector2D vectAPF = {rV_total.x, rV_total.y} + {0, 1}; // Combine direction vector with forward vector
+    
+    Vector2D normVectAPF = vectAPF.normalize(); // Normalize for stability
+   
+    this->pWalker->forward = utils::C2R(normVectAPF, this->pWalker->pIMU->yaw); // Transform to Rollator frame of reference
+
+    int speed = setSpeed(); // Grab speed command from potentiometer
+
+    this->pWalker->steer(this->pWalker->forward, speed); // Tell the rollator the motor differential
 }
 
-void Navigation::setSpeed()
+int Navigation::setSpeed()
 {
 
     if (!pEnvironment->safezoneViolation && !pEnvironment->crowd && !pEnvironment->road)
@@ -68,6 +100,7 @@ void Navigation::setSpeed()
             this->pWalker->curSpeedL = 0;
             this->pWalker->curSpeedR = 0;
             this->pWalker->curOffset = 0;
+            return 0;
         }
         else if (potVal > 1000)
         {
@@ -76,6 +109,7 @@ void Navigation::setSpeed()
             this->pWalker->curOffset = SPEED_1_RIGHT_WHEEL_OFFSET;
             this->pWalker->pWheelL->startWheel(this->pWalker->curSpeedL, 'F');
             this->pWalker->pWheelR->startWheel(this->pWalker->curSpeedR, 'F');
+            return SPEED_1;
         }
         else
         {
@@ -84,6 +118,7 @@ void Navigation::setSpeed()
             this->pWalker->curOffset = SPEED_2_RIGHT_WHEEL_OFFSET;
             this->pWalker->pWheelL->startWheel(this->pWalker->curSpeedL, 'F');
             this->pWalker->pWheelR->startWheel(this->pWalker->curSpeedR, 'F');
+            return SPEED_2;
         }
     }
 }
@@ -247,13 +282,21 @@ void Navigation::pivot(float aspect, char direction)
     }
 }
 
-// Invoke in Navigation.cpp to steer the Walker!! Use the potentiometer speed as argument 2
-void Navigation::steer(std::vector<double> direction_vector, int speed)
+// Calculate precise differential drive to follow direction vector
+void Navigation::steer(Vector2D direction_vector, int speed)
 {
-    this->pWalker->curSpeedL = static_cast<int>(direction_vector[0] * speed);
-    this->pWalker->curSpeedR = static_cast<int>(direction_vector[1] * speed);
+    // Scale the normalized direction vector by the speed
+    double vx = direction_vector.x;
+    double vy = direction_vector.y;
+
+    // Convert to wheel speeds using differential drive logic
+    this->pWalker->curSpeedL = static_cast<int>((vy + vx) * speed); // right turn, left wheel faster
+    this->pWalker->curSpeedR = static_cast<int>((vy - vx) * speed); // left turn, right wheel faster
+
+    // Apply motor offset correction to the right wheel
     this->pWalker->curSpeedR += this->pWalker->curOffset;
 
+    // Start the wheels (assuming 'F' = forward)
     this->pWalker->pWheelL->startWheel(this->pWalker->curSpeedL, 'F');
     this->pWalker->pWheelR->startWheel(this->pWalker->curSpeedR, 'F');
 }

@@ -6,62 +6,81 @@
 class utils
 {
 public:
-  static int distToObstacle(int pixel_location, char xory)
+  // Magnitude of a 2D vector
+  double mag2d(const Vector2D& vec)
   {
-    if (xory == 'X')
-      return (pixel_location - PRINCIPAL_POINT_X);
-    else
-      return (pixel_location - PRINCIPAL_POINT_Y);
+      return std::sqrt(vec.x * vec.x + vec.y * vec.y);
+  }
+
+  // Magnitude of a 3D vector
+  double mag3d(const Vector3D& vec)
+  {
+    return std::sqrt(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
   }
 
   // Calculate detection box area
-  static double calculateArea(float y2, float y1, float x2, float x1)
+  double calculateArea(float y2, float y1, float x2, float x1)
   {
-    return (y2 - y1) * (x2 - x1); // pixels
+    return (y2 - y1) * (x2 - x1); // unit pixels
   }
 
-  static int obstacleCentroid(int cor1, int cor2)
+  // Calculate center of a detection box along one dimension
+  // when calling, repeat for both camera image dimensions
+  int obstacleCentroid(int Pix1, int Pix2)
   {
-    return {(cor2 + cor1) / 2};
+    return {(Pix1 + Pix2) / 2}; // coordinate
   }
 
-  // Convert pixel coordinates to line-of-sight (LOS) vector
-  void pixel2los(double i, double j, double rLOScam[3])
+  // Convert 2D pixel coordinates to 3D line-of-sight vector
+  Vector3D pixel2los(int xPix, int yPix)
   {
-    // Normalized camera coordinates
-    double camXnorm = (i - PRINCIPAL_POINT_X) / FOCAL_LENGTH;
-    double camYnorm = (j - PRINCIPAL_POINT_Y) / FOCAL_LENGTH;
-
-    // Form unnormalized LOS vector
-    rLOScam[0] = camXnorm;
-    rLOScam[1] = camYnorm;
-    rLOScam[2] = 1.0;
-
-    // Normalize
-    double magnitude = std::sqrt(
-        rLOScam[0] * rLOScam[0] +
-        rLOScam[1] * rLOScam[1] +
-        rLOScam[2] * rLOScam[2]);
-
-    rLOScam[0] /= magnitude;
-    rLOScam[1] /= magnitude;
-    rLOScam[2] /= magnitude;
+      // Normalized camera coordinates
+      double camXnorm = (xPix - PRINCIPAL_POINT_X) / FOCAL_LENGTH;
+      double camYnorm = (yPix - PRINCIPAL_POINT_Y) / FOCAL_LENGTH;
+  
+      // LOS vector in camera frame
+      Vector3D rLOScam = {camXnorm, camYnorm, 1.0};
+  
+      return rLOScam;
   }
 
-  // The way this works is that in navigation class, we will call this function to get the repulsion vector and then subtract
-  // it from the forward vector to get the new direction vector. then in walker class, we will call the steer function to get the new speed commands for the motors.
-  double calculateRepulsion(int cor1, int cor2, char xory)
+  // Calculate a repulsion vector. attraction vector = {0,1}
+  Vector2D repulsionVector(int xPix, int yPix)
   {
-    // for amount of obstacles
-    int pixel_location = utils::obstacleCentroid(cor1, cor2);
-    int range = utils::distToObstacle(pixel_location, xory);
+    Vector2D pos = utils::normObstaclePosition(xPix, yPix); // Returns (x_obs, y_obs)
+    double distSq = std::pow(mag2d(pos), 2);
 
-    double repulsion = 0.0;
-    if (range > 0)
-    {                                  // Avoid division by zero
-      repulsion = K_REPULSION / range; // Larger repulsion as distance decreases
+    Vector2D repulsion = {0.0, 0.0};
+
+    if (distSq > 1e-6) // Avoid divide by zero
+    {
+        repulsion.x = -K_REPULSION * pos.x / distSq;
+        repulsion.y = -K_REPULSION * pos.y / distSq;
     }
-
     return repulsion;
   }
+
+  // Normalized obstacle position given coordinate in camera frame of reference
+  Vector2D normObstaclePosition(int xPix, int yPix)
+  {
+    double normX = (xPix - CAM_RESOLUTION_X / 2.0) / (CAM_RESOLUTION_X / 2.0);
+    double normY = (yPix - CAM_RESOLUTION_Y / 2.0) / (CAM_RESOLUTION_X / 2.0);
+
+    return Vector2D {normX, normY};
+  }
+
+  // GNC direction cosine matrix to transform camera frame to rollator frame
+  // yaw in degrees, vec {x,y}
+  Vector2D C2R(Vector2D vec, double yaw)
+  {
+    double cosYaw = std::cos(yaw);
+    double sinYaw = std::sin(yaw);
+
+    Vector2D transformedVec = {0.0, 0.0};
+    transformedVec.x = vec.x * cosYaw - vec.y * sinYaw;
+    transformedVec.y = vec.x * sinYaw + vec.y * cosYaw;
+
+    return transformedVec;
+  }
+
 };
