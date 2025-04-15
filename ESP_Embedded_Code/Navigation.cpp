@@ -39,15 +39,15 @@ void Navigation::navigate()
     this->saveNewFrame(); // update data
     for (int i = 0; i < 5; i++)
     {
-        this->pNetworking->pushSerialData("Frame: ");
+        this->pNetworking->pushSerialData("Frame :");
         Frame frame = this->frames[i];
         for (int j = 0; j < frame.object_names.size(); j++)
         {
-            String framestr = "Object: " + frame.object_names.at(i) + "Xpp: " + frame.xPPs.at(i) + "Ypp: " + frame.yPPs.at(i) + "\n";
+            String framestr = "Object: " + frame.object_names.at(j) + " Xpp: " + frame.xPPs.at(j) + " Ypp: " + frame.yPPs.at(j) + "\n";
             this->pNetworking->pushSerialData(framestr);
         }
     }
-    pNetworking->update();
+    this->pNetworking->update();
 
     //////////////////////////////////////////////////////////////////////////////////////////////
     // P-Field Algorithm
@@ -261,24 +261,24 @@ void Navigation::steer(std::vector<double> direction_vector, int speed)
 // Save Frame
 void Navigation::saveNewFrame()
 {
-    // Shift older frames
-    for (int i = 0; i < 4; i++)
+    // Shift older frames down the array
+    for (int i = 4; i > 0; i--)
     {
-        frames[i] = frames[i + 1];
+        frames[i] = this->frames[i - 1];
     }
 
-    // Create and store the newest frame
+    // Create and store the newest frame at index 0
     Frame newFrame;
 
     // Pull data from pEnvironment
-    newFrame.xPPs = pEnvironment->xPPs;
-    newFrame.yPPs = pEnvironment->yPPs;
+    newFrame.xPPs = this->pEnvironment->xPPs;
+    newFrame.yPPs = this->pEnvironment->yPPs;
 
     // Store object names from camera
-    newFrame.object_names = pEnvironment->object_names;
+    newFrame.object_names = this->pEnvironment->object_names;
 
-    // Assign the new frame to the last index
-    frames[4] = newFrame;
+    // Assign the new frame to the first index
+    this->frames[0] = newFrame;
 }
 
 void Navigation::tiltWarning()

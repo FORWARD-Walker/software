@@ -17,6 +17,7 @@ private:
     WiFiUDP udp; // UDP object
     WebServer server;
     String dataBuffer;
+    IPAddress lastCameraIP; // Store last camera's IP address for sending data
 
 public:
     Networking();                                   // Clas constructor

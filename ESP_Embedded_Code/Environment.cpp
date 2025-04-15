@@ -33,17 +33,21 @@ void Environment::updateEnvironment()
 
 void Environment::updateFrame()
 {
-    int objCount = this->pWalker->pCamera->objCount;
+    // Clear existing data
     this->xPPs.clear();
     this->yPPs.clear();
     this->object_names.clear();
+
+    int objCount = this->pWalker->pCamera->objCount;
+
     for (int i = 0; i < objCount; i++)
     {
-        this->xPPs.at(i) = utils::obstacleCentroid(this->pWalker->pCamera->objects.at(i).x1, this->pWalker->pCamera->objects.at(i).x2);
-        this->yPPs.at(i) = utils::obstacleCentroid(this->pWalker->pCamera->objects.at(i).y1, this->pWalker->pCamera->objects.at(i).y2);
-        this->object_names.at(i) = this->pWalker->pCamera->objects.at(i).name;
+        this->xPPs.push_back(utils::obstacleCentroid(this->pWalker->pCamera->objects[i].x1, this->pWalker->pCamera->objects[i].x2));
+        this->yPPs.push_back(utils::obstacleCentroid(this->pWalker->pCamera->objects[i].y1, this->pWalker->pCamera->objects[i].y2));
+        this->object_names.push_back(this->pWalker->pCamera->objects[i].name);
     }
 }
+
 
 void Environment::detectSafeZoneViolation()
 {

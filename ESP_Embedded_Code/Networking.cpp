@@ -61,6 +61,7 @@ void Networking::handleRoot()
 // Push Serial data
 void Networking::pushSerialData(String data)
 {
+    if(this->dataBuffer.length() > 100000) ESP.getFreeHeap();
     this->dataBuffer = data + "\n" + this->dataBuffer; // Append new data with a newline
 }
 
