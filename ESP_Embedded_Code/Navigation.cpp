@@ -11,6 +11,8 @@ Navigation::Navigation(Walker *pWalker, Networking *pNetworking, Environment *pE
 
 void Navigation::navigate()
 {
+    this->saveNewFrame(); // update data
+
     // Check Safe zone
     if (this->pEnvironment->safezoneViolation)
     {
@@ -18,10 +20,10 @@ void Navigation::navigate()
         this->pWalker->pWheelR->stopWheel();
         pulseHaptic(3, 'R');
         pulseHaptic(3, 'L');
-        pulseHaptic(3, 'R');
-        pulseHaptic(3, 'L');
-        pulseHaptic(3, 'R');
-        pulseHaptic(3, 'L');
+        pulseHaptic(2, 'R');
+        pulseHaptic(2, 'L');
+        pulseHaptic(1, 'R');
+        pulseHaptic(1, 'L');
     }
     // Check Road
     else if (this->pEnvironment->road)
@@ -34,24 +36,21 @@ void Navigation::navigate()
         this->pWalker->pWheelL->startWheel(this->pWalker->curSpeedL - CROWD_THROTTLE_VALUE, 'F');
         this->pWalker->pWheelR->startWheel(this->pWalker->curSpeedR - CROWD_THROTTLE_VALUE, 'F');
     }
-
-    // Navigate user through world
-    this->saveNewFrame(); // update data
-    for (int i = 0; i < 5; i++)
+    else
     {
-        this->pNetworking->pushSerialData("Frame :");
-        Frame frame = this->frames[i];
-        for (int j = 0; j < frame.object_names.size(); j++)
+        // Navigate user through world
+        for (int i = 0; i < 5; i++)
         {
-            String framestr = "Object: " + frame.object_names.at(j) + " Xpp: " + frame.xPPs.at(j) + " Ypp: " + frame.yPPs.at(j) + "\n";
-            this->pNetworking->pushSerialData(framestr);
+            this->pNetworking->pushSerialData("Frame :");
+            Frame frame = this->frames[i];
+            for (int j = 0; j < frame.object_names.size(); j++)
+            {
+                String framestr = "Object: " + frame.object_names.at(j) + " Xpp: " + frame.xPPs.at(j) + " Ypp: " + frame.yPPs.at(j) + "\n";
+                this->pNetworking->pushSerialData(framestr);
+            }
         }
+        this->pNetworking->update();
     }
-    this->pNetworking->update();
-
-    //////////////////////////////////////////////////////////////////////////////////////////////
-    // P-Field Algorithm
-    //////////////////////////////////////////////////////////////////////////////////////////////
 }
 
 void Navigation::setSpeed()
