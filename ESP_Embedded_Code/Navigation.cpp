@@ -18,6 +18,12 @@ void Navigation::navigate()
     this->curFrame.xPPs = this->pEnvironment->xPPs;
     this->curFrame.yPPs = this->pEnvironment->yPPs;
 
+    // Get Sonar Values
+    int S1_dist = this->pWalker->pS1->distance;
+    int S2_dist = this->pWalker->pS2->distance;
+    int S3_dist = this->pWalker->pS3->distance;
+    int S4_dist = this->pWalker->pS4->distance;
+
     this->setSpeed(); // Grab speed command from potentiometer
 
     // Check Safe zone
@@ -27,7 +33,7 @@ void Navigation::navigate()
         this->pWalker->pWheelR->stopWheel();
         return;
     }
-    else if (this->pEnvironment->S2Trig && this->pEnvironment->S3Trig)
+    else if (S2_dist < SONAR_FRONT_SAFEZONE && S3_dist < SONAR_FRONT_SAFEZONE)
     {
         this->pWalker->pWheelL->stopWheel();
         this->pWalker->pWheelR->stopWheel();
@@ -38,40 +44,70 @@ void Navigation::navigate()
         pulseHaptic(3, 'R');
         pulseHaptic(3, 'L');
     }
-    // Bump walker right
-    else if (this->pEnvironment->S2Trig)
+    // Sonar Navigate
+    else if (S2_dist < SONAR_NAVIGATION_ZONE || S3_dist < SONAR_NAVIGATION_ZONE)
     {
-        this->pWalker->pWheelR->startWheel(MIN_SPEED + this->pWalker->curOffset, 'F');
-        this->pWalker->pWheelL->startWheel(this->pWalker->curSpeed, 'F');
-    }
-    // Bump walker left
-    else if (this->pEnvironment->S3Trig)
-    {
-        this->pWalker->pWheelL->startWheel(MIN_SPEED, 'F');
-        this->pWalker->pWheelR->startWheel(this->pWalker->curSpeed + this->pWalker->curOffset, 'F');
+        // If S2 has priority
+        int speedOffset = 0;
+        if (S2_dist < S3_dist)
+        {
+            if (S2_dist < SONAR_NAV_ZONE_1)
+                speedOffset = SONAR_NAV_ZONE_1_OFFSET;
+            if (S2_dist < SONAR_NAV_ZONE_2)
+                speedOffset = SONAR_NAV_ZONE_2_OFFSET;
+            if (S2_dist < SONAR_NAV_ZONE_3)
+                speedOffset = SONAR_NAV_ZONE_3_OFFSET;
+
+            this->pWalker->pWheelR->startWheel(MIN_SPEED + this->pWalker->curOffset, 'F');
+            this->pWalker->pWheelL->startWheel(this->pWalker->curSpeed + speedOffset 'F');
+        }
+        else
+        {
+            if (S3_dist < SONAR_NAV_ZONE_1)
+                speedOffset = SONAR_NAV_ZONE_1_OFFSET;
+            if (S3_dist < SONAR_NAV_ZONE_2)
+                speedOffset = SONAR_NAV_ZONE_2_OFFSET;
+            if (S3_dist < SONAR_NAV_ZONE_3)
+                speedOffset = SONAR_NAV_ZONE_3_OFFSET;
+
+            this->pWalker->pWheelR->startWheel(MIN_SPEED, 'F');
+            this->pWalker->pWheelL->startWheel(this->pWalker->curSpeed + this->pWalker->curOffset + speedOffset 'F');
+        }
     }
     // Bump walker right
     else if (this->pEnvironment->S1Trig && !this->pEnvironment->S4Trig)
     {
         this->pWalker->pWheelR->startWheel(MIN_SPEED + this->pWalker->curOffset, 'F');
-        this->pWalker->pWheelL->startWheel(this->pWalker->curSpeed, 'F');
+        this->pWalker->pWheelL->startWheel(this->pWalker->curSpeed + TURN_BOOST 'F');
+        pulseHaptic(2, 'L');
     }
     // Bump walker left
     else if (this->pEnvironment->S4Trig && !this->pEnvironment->S1Trig)
     {
         this->pWalker->pWheelL->startWheel(MIN_SPEED, 'F');
-        this->pWalker->pWheelR->startWheel(this->pWalker->curSpeed + this->pWalker->curOffset, 'F');
+        this->pWalker->pWheelR->startWheel(this->pWalker->curSpeed + this->pWalker->curOffset + TURN_BOOST, 'F');
+        pulseHaptic(2, 'R');
     }
     // Check Road
     else if (this->pEnvironment->road)
     {
         this->emergencyStop();
+        pulseHaptic(3, 'R');
+        pulseHaptic(3, 'L');
+        pulseHaptic(3, 'R');
+        pulseHaptic(3, 'L');
+        pulseHaptic(3, 'R');
+        pulseHaptic(3, 'L');
     }
     // Check crowd
     else if (this->pEnvironment->crowd)
     {
         this->pWalker->pWheelL->startWheel(this->pWalker->curSpeed - CROWD_THROTTLE_VALUE, 'F');
         this->pWalker->pWheelR->startWheel(this->pWalker->curSpeed + this->pWalker->curOffset - CROWD_THROTTLE_VALUE, 'F');
+        pulseHaptic(1, 'L');
+        pulseHaptic(1, 'R');
+        pulseHaptic(1, 'L');
+        pulseHaptic(1, 'R');
     }
     else
     {
@@ -113,12 +149,15 @@ void Navigation::setSpeed()
 {
     this->pWalker->pPotentiometer->readValue();
     int potVal = this->pWalker->pPotentiometer->value;
-    if (potVal > 3500)
+    String str = String(potVal);
+    this->pNetworking->pushSerialData(str);
+
+    if (potVal > 2000)
     {
         this->pWalker->curSpeed = 0;
         this->pWalker->curOffset = 0;
     }
-    else if (potVal > 1000)
+    else if (potVal > 600)
     {
         this->pWalker->curSpeed = SPEED_1;
         this->pWalker->curOffset = SPEED_1_RIGHT_WHEEL_OFFSET;
@@ -127,26 +166,6 @@ void Navigation::setSpeed()
     {
         this->pWalker->curSpeed = SPEED_2;
         this->pWalker->curOffset = SPEED_2_RIGHT_WHEEL_OFFSET;
-    }
-}
-
-// Sample sonar avoidance (unchanged)
-void Navigation::Sample_Sonar_Avoidance()
-{
-    if (this->pWalker->pS2->distance < 100 || this->pWalker->pS3->distance < 100)
-    {
-        if (this->pWalker->pS2->distance > this->pWalker->pS3->distance)
-        {
-            pulseHaptic(3, 'R');
-            veer(45.0, 'L');
-            pulseHaptic(3, 'R');
-        }
-        else
-        {
-            pulseHaptic(3, 'L');
-            veer(45.0, 'R');
-            pulseHaptic(3, 'L');
-        }
     }
 }
 

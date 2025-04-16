@@ -11,7 +11,6 @@ class Environment
 private:
     void detectRoad();
     void detectCrowd();
-    void detectSonarPath();
     void updateFrame();
 
 public:
@@ -27,10 +26,6 @@ public:
     Networking *pNetworking;
 
     // Flags
-    bool S1Trig;
-    bool S2Trig;
-    bool S3Trig;
-    bool S4Trig;
     bool crowd;
     bool road;
 

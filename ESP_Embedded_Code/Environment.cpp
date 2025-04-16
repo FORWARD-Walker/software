@@ -26,7 +26,6 @@ void Environment::updateEnvironment()
     updateFrame();
 
     // Run Checks
-    detectSonarPath();
     detectRoad();
     detectCrowd();
 }
@@ -46,24 +45,6 @@ void Environment::updateFrame()
         this->yPPs.push_back(utils::obstacleCentroid(this->pWalker->pCamera->objects[i].y1, this->pWalker->pCamera->objects[i].y2));
         this->object_names.push_back(this->pWalker->pCamera->objects[i].name);
     }
-}
-
-void Environment::detectSonarPath()
-{
-    // Set stop conditions
-    S1Trig = false;
-    S2Trig = false;
-    S3Trig = false;
-    S4Trig = false;
-
-    if (pWalker->pS1->distance < SONAR_SIDE_SAFEZONE)
-        S1Trig = true;
-    if (pWalker->pS2->distance < SONAR_FRONT_SAFEZONE)
-        S2Trig = true;
-    if (pWalker->pS3->distance < SONAR_FRONT_SAFEZONE)
-        S3Trig = true;
-    if (pWalker->pS4->distance < SONAR_SIDE_SAFEZONE)
-        S4Trig = true;
 }
 
 void Environment::detectRoad()
