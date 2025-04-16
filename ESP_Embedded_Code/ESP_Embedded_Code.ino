@@ -14,7 +14,7 @@
 #include "Environment.h"
 #include "Pins.h"
 
-// Network Ref
+// Network Reference
 Networking* pNetworking = nullptr;
 
 // Walker structure
@@ -23,23 +23,20 @@ Walker* pWalker = nullptr;
 // Environment object
 Environment* pEnvironment = nullptr;
 
-// Navigation Ref
+// Navigation Reference
 Navigation* pNavigation = nullptr;
 
 // Timer Objects
 hw_timer_t *Timer_1Hz = nullptr;
-hw_timer_t *Timer_10Hz = nullptr;
-hw_timer_t *Timer_30Hz = nullptr;
+hw_timer_t *Timer_5Hz = nullptr;
 
 // ISR prototypes
 static void IRAM_ATTR Timer_1Hz_ISR();
-static void IRAM_ATTR Timer_10Hz_ISR();
-static void IRAM_ATTR Timer_30Hz_ISR();
+static void IRAM_ATTR Timer_5Hz_ISR();
 
 // Boolean ISR Flags
-bool Timer_1HZ_FG = false;
-bool Timer_10HZ_FG = false;
-bool Timer_30HZ_FG = false;
+volatile bool Timer_1HZ_FG = false;
+volatile bool Timer_5HZ_FG = false;
 
 // Setup Code
 void setup()
@@ -47,33 +44,28 @@ void setup()
   // Set up serial
   Serial.begin(115200); // Init Serial
 
-  // Set up I2C
+  // Set up I2C (using defined pins from Pins.h)
   Wire.begin(I2C_SDA, I2C_SCL);
 
-  // Setup heartbeat
-  pinMode(yLED, OUTPUT); // Set up LED as output
-  digitalWrite(yLED, HIGH); // Init to high
-  pinMode(bLED, OUTPUT); // Set up LED as output
-  digitalWrite(bLED, LOW); // Init to high
+  // Setup heartbeat LEDs
+  pinMode(yLED, OUTPUT);
+  digitalWrite(yLED, HIGH);
+  pinMode(bLED, OUTPUT);
+  digitalWrite(bLED, LOW);
 
-  // Setup Timers and Interrupts
-  // Timer 1 Hz
+  // --- Timer 1 Hz ---
   Timer_1Hz = timerBegin(1000000);
   timerAttachInterrupt(Timer_1Hz, &Timer_1Hz_ISR);
   timerAlarm(Timer_1Hz, 1000000, true, 0);
 
-  // Timer 10 Hz
-  Timer_10Hz = timerBegin(10000000);
-  timerAttachInterrupt(Timer_10Hz, &Timer_10Hz_ISR);
-  timerAlarm(Timer_10Hz, 1000000, true, 0);  
-  
-  // Timer 30 Hz
-  Timer_30Hz = timerBegin(30000000);
-  timerAttachInterrupt(Timer_30Hz, &Timer_30Hz_ISR);
-  timerAlarm(Timer_30Hz, 1000000, true, 0);
+  // --- Timer 5 Hz ---
+  Timer_5Hz = timerBegin(5000000);
+  timerAttachInterrupt(Timer_5Hz, &Timer_5Hz_ISR);
+  timerAlarm(Timer_5Hz, 1000000, true, 0);
+
 
   // Setup ESP32 network
-  pNetworking = new Networking();  // Init object
+  pNetworking = new Networking();
   pNetworking->pushSerialData("Network Initialized!\n");
 
   // Init Walker
@@ -91,69 +83,41 @@ void setup()
 
 // Main loop
 void loop()
-{ 
-
-if (Timer_30HZ_FG)
 {
-    Timer_30HZ_FG = false; // Reset ISR
-}
-
-
-  // 10 HZ ISR
-  if(Timer_10HZ_FG)
+  // Handle 1 Hz tasks
+  if (Timer_1HZ_FG) 
   {
-    pNavigation->setSpeed(); // Poll to adjust speed based on potentiometer
+    Blink_Heartbeat(); // Blink Heartbeat
+    pNetworking->update(); // Service Network
 
-
-    Timer_10HZ_FG = false; // Reset ISR
+    Timer_1HZ_FG = false;  // Reset flag
   }
 
-  // 1 HZ ISR
-  if (Timer_1HZ_FG)
+  // Handle 5 Hz tasks
+  if (Timer_5HZ_FG)
   {
-      // Record start time
-      unsigned long startMicros = micros();
+    // Update environment data and run navigation algorithms
+    pEnvironment->updateEnvironment();
+    pNavigation->navigate();
 
-      // Update Environment data
-      pEnvironment->updateEnvironment();
-
-      // Record end time
-      unsigned long endMicros = micros();
-      
-      // Calculate elapsed time
-      unsigned long elapsedMicros = endMicros - startMicros;
-      
-      // Send timing info over serial
-      pNetworking->pushSerialData("updateEnvironment took " + String(elapsedMicros) + " microseconds.\n");
-
-      // Continue with other tasks
-      pNavigation->navigate(); // Navigate
-      Blink_Heartbeat();
-
-      Timer_1HZ_FG = false;  // Reset ISR
+    Timer_5HZ_FG = false;  // Reset flag
+    
   }
 }
 
-// ISRs
+// Timer ISRs
 static void IRAM_ATTR Timer_1Hz_ISR()
 {
   Timer_1HZ_FG = true;
 }
 
-static void IRAM_ATTR Timer_10Hz_ISR()
+static void IRAM_ATTR Timer_5Hz_ISR()
 {
-  Timer_10HZ_FG = true;
-}
-
-static void IRAM_ATTR Timer_30Hz_ISR()
-{
-  Timer_30HZ_FG = true;
+  Timer_5HZ_FG = true;
 }
 
 void Blink_Heartbeat()
 {
-    digitalWrite(yLED, digitalRead(yLED)^1); // Flash heartbeat
-    digitalWrite(bLED, digitalRead(bLED)^1); // Flash heartbeat
+    digitalWrite(yLED, digitalRead(yLED) ^ 1); // Toggle yLED
+    digitalWrite(bLED, digitalRead(bLED) ^ 1); // Toggle bLED
 }
-
-

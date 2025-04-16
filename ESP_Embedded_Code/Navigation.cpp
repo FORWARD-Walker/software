@@ -1,11 +1,7 @@
 #include "Navigation.h"
 #include "Constants.h"
 #include "utils.cpp"
-
 #include <vector>
-
-std::vector<double> norm_rLOS_list;
-std::vector<double> distCam_list;
 
 // Navigation Algorithms and Helper functions
 Navigation::Navigation(Walker *pWalker, Networking *pNetworking, Environment *pEnvironment)
@@ -17,8 +13,21 @@ Navigation::Navigation(Walker *pWalker, Networking *pNetworking, Environment *pE
 
 void Navigation::navigate()
 {
+    // Get Environment Frame
+    this->curFrame.object_names = this->pEnvironment->object_names;
+    this->curFrame.xPPs = this->pEnvironment->xPPs;
+    this->curFrame.yPPs = this->pEnvironment->yPPs;
+
+    this->setSpeed(); // Grab speed command from potentiometer
+
     // Check Safe zone
-    if (this->pEnvironment->safezoneViolation)
+    if (this->pWalker->curSpeed == 0)
+    {
+        this->pWalker->pWheelL->stopWheel();
+        this->pWalker->pWheelR->stopWheel();
+        return;
+    }
+    else if (this->pEnvironment->S2Trig && this->pEnvironment->S3Trig)
     {
         this->pWalker->pWheelL->stopWheel();
         this->pWalker->pWheelR->stopWheel();
@@ -29,6 +38,30 @@ void Navigation::navigate()
         pulseHaptic(3, 'R');
         pulseHaptic(3, 'L');
     }
+    // Bump walker right
+    else if (this->pEnvironment->S2Trig)
+    {
+        this->pWalker->pWheelR->startWheel(MIN_SPEED + this->pWalker->curOffset, 'F');
+        this->pWalker->pWheelL->startWheel(this->pWalker->curSpeed, 'F');
+    }
+    // Bump walker left
+    else if (this->pEnvironment->S3Trig)
+    {
+        this->pWalker->pWheelL->startWheel(MIN_SPEED, 'F');
+        this->pWalker->pWheelR->startWheel(this->pWalker->curSpeed + this->pWalker->curOffset, 'F');
+    }
+    // Bump walker right
+    else if (this->pEnvironment->S1Trig && !this->pEnvironment->S4Trig)
+    {
+        this->pWalker->pWheelR->startWheel(MIN_SPEED + this->pWalker->curOffset, 'F');
+        this->pWalker->pWheelL->startWheel(this->pWalker->curSpeed, 'F');
+    }
+    // Bump walker left
+    else if (this->pEnvironment->S4Trig && !this->pEnvironment->S1Trig)
+    {
+        this->pWalker->pWheelL->startWheel(MIN_SPEED, 'F');
+        this->pWalker->pWheelR->startWheel(this->pWalker->curSpeed + this->pWalker->curOffset, 'F');
+    }
     // Check Road
     else if (this->pEnvironment->road)
     {
@@ -37,97 +70,63 @@ void Navigation::navigate()
     // Check crowd
     else if (this->pEnvironment->crowd)
     {
-        this->pWalker->pWheelL->startWheel(this->pWalker->curSpeedL - CROWD_THROTTLE_VALUE, 'F');
-        this->pWalker->pWheelR->startWheel(this->pWalker->curSpeedR - CROWD_THROTTLE_VALUE, 'F');
+        this->pWalker->pWheelL->startWheel(this->pWalker->curSpeed - CROWD_THROTTLE_VALUE, 'F');
+        this->pWalker->pWheelR->startWheel(this->pWalker->curSpeed + this->pWalker->curOffset - CROWD_THROTTLE_VALUE, 'F');
     }
-
-    // Navigate user through world
-    this->saveNewFrame(); // update data
-    for (int i = 0; i < 5; i++)
+    else
     {
-        this->pNetworking->pushSerialData("Frame :");
-        Frame frame = this->frames[i];
-        for (int j = 0; j < frame.object_names.size(); j++)
+        // Navigate
+        Vector2D rV_total = {0.0, 0.0};
+        Vector3D rLOS_i = {0.0, 0.0, 0.0};
+        double norm_rLOS_i = 0.0;
+        double distCam_i = 0.0;
+
+        // Iterate through all obstacles in view (max 5)
+        for (int i = 0; i < this->curFrame.object_names.size(); i++)
         {
-            String framestr = "Object: " + frame.object_names.at(j) + " Xpp: " + frame.xPPs.at(j) + " Ypp: " + frame.yPPs.at(j) + "\n";
-            this->pNetworking->pushSerialData(framestr);
+            Vector2D rV_i = utils::repulsionVector(this->curFrame.xPPs[i], this->curFrame.yPPs[i]); // Calculate repulsion vector
+            rV_total.x += rV_i.x;                                                                   // accumulate x-direction commands
+            rV_total.y += rV_i.y;                                                                   // accumulate y-direction commands
+
+            Vector3D rLOS_i = utils::pixel2los(this->curFrame.xPPs[i], this->curFrame.yPPs[i]); // Calculate 3D LOS vector
+
+            norm_rLOS_i = utils::mag3d(rLOS_i.normalize()); // Normalized 3D LOS vector
+
+            distCam_i = utils::mag3d(rLOS_i); // Range estimate from camera to obstacle
         }
+
+        // Combine direction vector with forward vector
+        Vector2D vectAPF = {0.0, 0.0};
+        vectAPF.x = rV_total.x;
+        vectAPF.y = rV_total.y + 1.0;
+
+        Vector2D normVectAPF = vectAPF.normalize(); // Normalize for stability
+
+        this->pWalker->forward = utils::C2R(normVectAPF, this->pWalker->pIMU->yaw); // Transform to Rollator frame of reference
+        this->pWalker->forward.y = max(0.0, this->pWalker->forward.y);
+
+        this->steer(this->pWalker->forward); // Tell the rollator the motor differential
     }
-    this->pNetworking->update();
-
-    //////////////////////////////////////////////////////////////////////////////////////////////
-    // Artificial Potential Field Algorithm for multi-obstacle avoidance
-    // note** might want to increase update frequency
-    //////////////////////////////////////////////////////////////////////////////////////////////
-    Vector2D rV_total = {0.0, 0.0};
-    Vector3D rLOS_i = {0.0, 0.0, 0.0};
-    double norm_rLOS_i = 0.0;
-    double distCam_i = 0.0;
-
-    // Iterate through all obstacles in view (max 5)
-    for (int i = 0; i < 5; i++) {
-        Vector2D rV_i = utils::repulsionVector(this->frames->xPPs(i), this->frames->yPPs(i)); // Calculate repulsion vector
-        rV_total.x += rV_i.x; // accumulate x-direction commands
-        rV_total.y += rV_i.y; // accumulate y-direction commands
-
-        Vector3D rLOS_i = utils::pixel2los(this->frames->xPPs(i), this->frames->yPPs(i)); // Calculate 3D LOS vector
-
-        norm_rLOS_i = utils::mag3d(rLOS_i.normalize()); // Normalized 3D LOS vector
-
-        distCam_i = utils::mag3d(rLOS_i); // Range estimate from camera to obstacle
-
-        norm_rLOS_list.push_back(norm_rLOS_i); // Store normalized LOS magnitudes
-        distCam_list.push_back(distCam_i); // Store distance estimates
-    }
-
-    // Combine direction vector with forward vector
-    Vector2D vectAPF = {0.0, 0.0};
-    vectAPF.x = rV_total.x;
-    vectAPF.y = rV_total.y + 1.0; 
-    
-    Vector2D normVectAPF = vectAPF.normalize(); // Normalize for stability
-   
-    this->pWalker->forward = utils::C2R(normVectAPF, this->pWalker->pIMU->yaw); // Transform to Rollator frame of reference
-
-    int speed = setSpeed(); // Grab speed command from potentiometer
-
-    this->steer(this->pWalker->forward, speed); // Tell the rollator the motor differential
 }
 
-int Navigation::setSpeed()
+void Navigation::setSpeed()
 {
-
-    if (!pEnvironment->safezoneViolation && !pEnvironment->crowd && !pEnvironment->road)
+    this->pWalker->pPotentiometer->readValue();
+    int potVal = this->pWalker->pPotentiometer->value;
+    if (potVal > 3500)
     {
-        this->pWalker->pPotentiometer->readValue();
-        int potVal = this->pWalker->pPotentiometer->value;
-        if (potVal > 3500)
-        {
-            this->pWalker->pWheelL->stopWheel();
-            this->pWalker->pWheelR->stopWheel();
-            this->pWalker->curSpeedL = 0;
-            this->pWalker->curSpeedR = 0;
-            this->pWalker->curOffset = 0;
-            return 0;
-        }
-        else if (potVal > 1000)
-        {
-            this->pWalker->curSpeedL = SPEED_1;
-            this->pWalker->curSpeedR = SPEED_1 + SPEED_1_RIGHT_WHEEL_OFFSET;
-            this->pWalker->curOffset = SPEED_1_RIGHT_WHEEL_OFFSET;
-            this->pWalker->pWheelL->startWheel(this->pWalker->curSpeedL, 'F');
-            this->pWalker->pWheelR->startWheel(this->pWalker->curSpeedR, 'F');
-            return SPEED_1;
-        }
-        else
-        {
-            this->pWalker->curSpeedL = SPEED_2;
-            this->pWalker->curSpeedR = SPEED_2 + SPEED_2_RIGHT_WHEEL_OFFSET;
-            this->pWalker->curOffset = SPEED_2_RIGHT_WHEEL_OFFSET;
-            this->pWalker->pWheelL->startWheel(this->pWalker->curSpeedL, 'F');
-            this->pWalker->pWheelR->startWheel(this->pWalker->curSpeedR, 'F');
-            return SPEED_2;
-        }
+        this->pWalker->curSpeed = 0;
+        this->pWalker->curOffset = 0;
+    }
+    else if (potVal > 1000)
+    {
+        this->pWalker->curSpeed = SPEED_1;
+        this->pWalker->curOffset = SPEED_1_RIGHT_WHEEL_OFFSET;
+    }
+    else
+    {
+        this->pWalker->curSpeed = SPEED_2;
+        this->pWalker->curOffset = SPEED_2_RIGHT_WHEEL_OFFSET;
     }
 }
 
@@ -213,123 +212,24 @@ void Navigation::pulseHaptic(int urgency, char direction)
     }
 }
 
-// Veer function (unchanged, uses pivot)
-void Navigation::veer(float aspect, char direction)
-{
-    this->pWalker->pWheelL->stopWheel();
-    this->pWalker->pWheelR->stopWheel();
-
-    // Pivot to desired direction
-    pivot(aspect, direction);
-
-    // Move forward till object is out of way
-    switch (direction)
-    {
-        // Start Wheels
-        this->pWalker->pWheelL->startWheel(this->pWalker->curSpeedL, 'F');
-        this->pWalker->pWheelR->startWheel(this->pWalker->curSpeedR, 'F');
-
-    // Wait for appropriate sensor to be no longer close range
-    case 'L':
-        while (this->pWalker->pS3->distance < 100)
-        {
-            this->pWalker->pS3->updateDistance();
-        }
-        break;
-    case 'R':
-    {
-        this->pWalker->pWheelL->startWheel(this->pWalker->curSpeedL, 'F');
-        this->pWalker->pWheelR->startWheel(this->pWalker->curSpeedR, 'F');
-        while (this->pWalker->pS2->distance < 100)
-        {
-            this->pWalker->pS2->updateDistance();
-        }
-        break;
-    }
-    default:
-        break;
-
-        // Stop and pivot back
-        this->pWalker->pWheelL->stopWheel();
-        this->pWalker->pWheelR->stopWheel();
-    }
-
-    pivot(-aspect, direction == 'L' ? 'R' : 'L');
-
-    // Retart wheels
-    this->pWalker->pWheelL->startWheel(this->pWalker->curSpeedL, 'F');
-    this->pWalker->pWheelR->startWheel(this->pWalker->curSpeedR, 'F');
-}
-
-// Pivot function (unchanged)
-void Navigation::pivot(float aspect, char direction)
-{
-    float initAngle = this->pWalker->pIMU->yaw;
-    float deltaAngle = 0.0;
-
-    // Pivot Walker
-    if (direction == 'L')
-    {
-        this->pWalker->pWheelR->startWheel(this->pWalker->curSpeedR, 'F');
-        while (fabs(deltaAngle) < aspect)
-        {
-            this->pWalker->pIMU->updateData();
-            deltaAngle = fmod((initAngle - this->pWalker->pIMU->yaw) + 180.0, 360.0) - 180.0;
-        }
-        this->pWalker->pWheelR->stopWheel();
-    }
-    else
-    {
-        this->pWalker->pWheelL->startWheel(this->pWalker->curSpeedL, 'F');
-        while (fabs(deltaAngle) < aspect)
-        {
-            this->pWalker->pIMU->updateData();
-            deltaAngle = fmod((initAngle - this->pWalker->pIMU->yaw) + 180.0, 360.0) - 180.0;
-        }
-        this->pWalker->pWheelL->stopWheel();
-    }
-}
-
 // Calculate precise differential drive to follow direction vector
-void Navigation::steer(Vector2D direction_vector, int speed)
+void Navigation::steer(Vector2D direction_vector)
 {
+    // Speed avg
+    int speedAvgL = (MIN_SPEED + this->pWalker->curSpeed) / 2;
+    int speedAvgR = (MIN_SPEED + this->pWalker->curOffset + this->pWalker->curSpeed + this->pWalker->curOffset) / 2;
+
     // Scale the normalized direction vector by the speed
     double vx = direction_vector.x;
     double vy = direction_vector.y;
 
     // Convert to wheel speeds using differential drive logic
-    this->pWalker->curSpeedL = static_cast<int>((vy + vx) * speed); // right turn, left wheel faster
-    this->pWalker->curSpeedR = static_cast<int>((vy - vx) * speed); // left turn, right wheel faster
-
-    // Apply motor offset correction to the right wheel
-    this->pWalker->curSpeedR += this->pWalker->curOffset;
+    int speedL = static_cast<int>((vy + vx) * ((this->pWalker->curSpeed - MIN_SPEED) / 2) + speedAvgL); // right turn, left wheel faster
+    int speedR = static_cast<int>((vy - vx) * ((this->pWalker->curSpeed - MIN_SPEED) / 2) + speedAvgR); // left turn, right wheel faster
 
     // Start the wheels (assuming 'F' = forward)
-    this->pWalker->pWheelL->startWheel(this->pWalker->curSpeedL, 'F');
-    this->pWalker->pWheelR->startWheel(this->pWalker->curSpeedR, 'F');
-}
-
-// Save Frame
-void Navigation::saveNewFrame()
-{
-    // Shift older frames down the array
-    for (int i = 4; i > 0; i--)
-    {
-        frames[i] = this->frames[i - 1];
-    }
-
-    // Create and store the newest frame at index 0
-    Frame newFrame;
-
-    // Pull data from pEnvironment
-    newFrame.xPPs = this->pEnvironment->xPPs;
-    newFrame.yPPs = this->pEnvironment->yPPs;
-
-    // Store object names from camera
-    newFrame.object_names = this->pEnvironment->object_names;
-
-    // Assign the new frame to the first index
-    this->frames[0] = newFrame;
+    this->pWalker->pWheelL->startWheel(speedL, 'F');
+    this->pWalker->pWheelR->startWheel(speedR, 'F');
 }
 
 void Navigation::tiltWarning()

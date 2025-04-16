@@ -26,7 +26,7 @@ void Environment::updateEnvironment()
     updateFrame();
 
     // Run Checks
-    detectSafeZoneViolation();
+    detectSonarPath();
     detectRoad();
     detectCrowd();
 }
@@ -48,18 +48,22 @@ void Environment::updateFrame()
     }
 }
 
-
-void Environment::detectSafeZoneViolation()
+void Environment::detectSonarPath()
 {
     // Set stop conditions
-    this->safezoneViolation = false;
-    if ((this->pWalker->pS1->distance < SONAR_SIDE_SAFEZONE) ||
-        (this->pWalker->pS2->distance < SONAR_FRONT_SAFEZONE) ||
-        (this->pWalker->pS3->distance < SONAR_FRONT_SAFEZONE) ||
-        (this->pWalker->pS4->distance < SONAR_SIDE_SAFEZONE))
-    {
-        this->safezoneViolation = true;
-    }
+    S1Trig = false;
+    S2Trig = false;
+    S3Trig = false;
+    S4Trig = false;
+
+    if (pWalker->pS1->distance < SONAR_SIDE_SAFEZONE)
+        S1Trig = true;
+    if (pWalker->pS2->distance < SONAR_FRONT_SAFEZONE)
+        S2Trig = true;
+    if (pWalker->pS3->distance < SONAR_FRONT_SAFEZONE)
+        S3Trig = true;
+    if (pWalker->pS4->distance < SONAR_SIDE_SAFEZONE)
+        S4Trig = true;
 }
 
 void Environment::detectRoad()
@@ -127,13 +131,6 @@ void Environment::postEnvironmentData()
     sensorData += this->pWalker->pIMU->pitch;
     sensorData += " Roll: ";
     sensorData += this->pWalker->pIMU->roll;
-    sensorData += '\n';
-    sensorData += "Accx: ";
-    sensorData += this->pWalker->pIMU->accx;
-    sensorData += " Accy: ";
-    sensorData += this->pWalker->pIMU->accy;
-    sensorData += " Accz: ";
-    sensorData += this->pWalker->pIMU->accz;
     sensorData += '\n';
 
     sensorData += "Object Count: ";

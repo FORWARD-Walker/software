@@ -33,19 +33,18 @@ void Imu::updateData()
     this->pitch = event.orientation.y; // Extract pitch
     this->roll = event.orientation.z;  // Extract roll
 
-    imu::Vector<3> linearAccel = bno.getVector(Adafruit_BNO055::VECTOR_LINEARACCEL);
-    this->accx = linearAccel.x(); // x accel
-    this->accy = linearAccel.y(); // y accel
-    this->accz = linearAccel.z(); // z accel
+    // imu::Vector<3> linearAccel = bno.getVector(Adafruit_BNO055::VECTOR_LINEARACCEL);
+    // this->accx = linearAccel.x(); // x accel
+    // this->accy = linearAccel.y(); // y accel
+    // this->accz = linearAccel.z(); // z accel
 
     // velocity is accumulation of acceleration over operation frequency timestep
-    this->velx += accx * 1 / FREQ_UPDATE_DATA;
-    this->vely += accy * 1 / FREQ_UPDATE_DATA;
-    this->velz += accz * 1 / FREQ_UPDATE_DATA;
+    // this->velx += accx * 1 / FREQ_UPDATE_DATA;
+    // this->vely += accy * 1 / FREQ_UPDATE_DATA;
+    // this->velz += accz * 1 / FREQ_UPDATE_DATA;
 
-    // position is accumulation of velocity
-    this->posx += velx * 1 / FREQ_UPDATE_DATA;
-    this->posy += vely * 1 / FREQ_UPDATE_DATA;
-    this->posz += velz * 1 / FREQ_UPDATE_DATA;
-
+    // // position is accumulation of velocity
+    // this->posx += velx * 1 / FREQ_UPDATE_DATA;
+    // this->posy += vely * 1 / FREQ_UPDATE_DATA;
+    // this->posz += velz * 1 / FREQ_UPDATE_DATA;
 }

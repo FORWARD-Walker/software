@@ -20,8 +20,7 @@ public:
 
   Vector2D forward; // APF direction vector
 
-  int curSpeedL; // left wheel speed command
-  int curSpeedR; // right wheel speed command
+  int curSpeed;  // left wheel speed command
   int curOffset; // Track Current right wheel offset
 
   // Sensor Objects
