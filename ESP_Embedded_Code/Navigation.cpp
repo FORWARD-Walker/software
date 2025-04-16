@@ -45,7 +45,7 @@ void Navigation::navigate()
         pulseHaptic(3, 'L');
     }
     // Sonar Navigate
-    else if (S2_dist < SONAR_NAVIGATION_ZONE || S3_dist < SONAR_NAVIGATION_ZONE)
+    else if (S2_dist < SONAR_NAVIGATION_ZONE || S3_dist < SONAR_NAVIGATION_ZONE && (abs(S2_dist - S3_dist) > 10))
     {
         // If S2 has priority
         int speedOffset = 0;
@@ -59,7 +59,7 @@ void Navigation::navigate()
                 speedOffset = SONAR_NAV_ZONE_3_OFFSET;
 
             this->pWalker->pWheelR->startWheel(MIN_SPEED + this->pWalker->curOffset, 'F');
-            this->pWalker->pWheelL->startWheel(this->pWalker->curSpeed + speedOffset 'F');
+            this->pWalker->pWheelL->startWheel(this->pWalker->curSpeed + speedOffset, 'F');
         }
         else
         {
@@ -71,18 +71,18 @@ void Navigation::navigate()
                 speedOffset = SONAR_NAV_ZONE_3_OFFSET;
 
             this->pWalker->pWheelR->startWheel(MIN_SPEED, 'F');
-            this->pWalker->pWheelL->startWheel(this->pWalker->curSpeed + this->pWalker->curOffset + speedOffset 'F');
+            this->pWalker->pWheelL->startWheel(this->pWalker->curSpeed + this->pWalker->curOffset + speedOffset, 'F');
         }
     }
     // Bump walker right
-    else if (this->pEnvironment->S1Trig && !this->pEnvironment->S4Trig)
+    else if (S1_dist < SONAR_SIDE_SAFEZONE && !(S4_dist < SONAR_SIDE_SAFEZONE))
     {
         this->pWalker->pWheelR->startWheel(MIN_SPEED + this->pWalker->curOffset, 'F');
-        this->pWalker->pWheelL->startWheel(this->pWalker->curSpeed + TURN_BOOST 'F');
+        this->pWalker->pWheelL->startWheel(this->pWalker->curSpeed + TURN_BOOST, 'F');
         pulseHaptic(2, 'L');
     }
     // Bump walker left
-    else if (this->pEnvironment->S4Trig && !this->pEnvironment->S1Trig)
+    else if (S4_dist < SONAR_SIDE_SAFEZONE && !(S1_dist < SONAR_SIDE_SAFEZONE))
     {
         this->pWalker->pWheelL->startWheel(MIN_SPEED, 'F');
         this->pWalker->pWheelR->startWheel(this->pWalker->curSpeed + this->pWalker->curOffset + TURN_BOOST, 'F');
@@ -155,7 +155,7 @@ void Navigation::setSpeed()
     String str = String(potVal);
     this->pNetworking->pushSerialData(str);
 
-    if (potVal > 2000)
+    if (potVal > 2100)
     {
         this->pWalker->curSpeed = 0;
         this->pWalker->curOffset = 0;
