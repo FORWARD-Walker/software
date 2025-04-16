@@ -7,13 +7,13 @@ class utils
 {
 public:
   // Magnitude of a 2D vector
-  double mag2d(const Vector2D& vec)
+  double mag2d(Vector2D vec)
   {
       return std::sqrt(vec.x * vec.x + vec.y * vec.y);
   }
 
   // Magnitude of a 3D vector
-  double mag3d(const Vector3D& vec)
+  double mag3d(Vector3D vec)
   {
     return std::sqrt(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
   }

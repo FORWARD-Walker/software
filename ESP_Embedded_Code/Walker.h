@@ -10,6 +10,7 @@
 #include "Headlight.h"
 #include "Photoresistor.h"
 #include "Networking.h"
+#include "Constants.h"
 
 // Walker structure
 class Walker
@@ -17,8 +18,7 @@ class Walker
 public:
   Walker(Networking *pNetworking); // Constructor
 
-  std::vector<double> forward; // APF direction vector
-  void steer();                // Determines motor differential speed based on the APF direction vector
+  Vector2D forward; // APF direction vector
 
   int curSpeedL; // left wheel speed command
   int curSpeedR; // right wheel speed command

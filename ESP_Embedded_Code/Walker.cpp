@@ -10,7 +10,7 @@ Walker::Walker(Networking *pNetworking)
     this->curSpeedR = 0;
     this->curOffset = 0;
 
-    this->forward = {0, 1}; // Initialize APF direction vector
+    this->forward = {0.0, 1.0}; // Initialize APF direction vector
 
     // Initizalize the Sonar objects
     this->pS1 = new Sonar(TRIG1, ECHO1);

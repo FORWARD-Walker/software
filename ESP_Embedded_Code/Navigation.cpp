@@ -1,5 +1,6 @@
 #include "Navigation.h"
 #include "Constants.h"
+#include "utils.cpp"
 
 #include <vector>
 
@@ -58,24 +59,31 @@ void Navigation::navigate()
     // Artificial Potential Field Algorithm for multi-obstacle avoidance
     // note** might want to increase update frequency
     //////////////////////////////////////////////////////////////////////////////////////////////
-    
-    // Iterate through all obstacles in view
-    for (int i = 0; i < frame.object_names.size(); i++) {
-        Vector2D rV_i = utils::repulsionVector(frame.xPPs(i), frame.yPPs(i)); // Calculate repulsion vector
+    Vector2D rV_total = {0.0, 0.0};
+    Vector3D rLOS_i = {0.0, 0.0, 0.0};
+    double norm_rLOS_i = 0.0;
+    double distCam_i = 0.0;
+
+    // Iterate through all obstacles in view (max 5)
+    for (int i = 0; i < 5; i++) {
+        Vector2D rV_i = utils::repulsionVector(this->frames->xPPs(i), this->frames->yPPs(i)); // Calculate repulsion vector
         rV_total.x += rV_i.x; // accumulate x-direction commands
         rV_total.y += rV_i.y; // accumulate y-direction commands
 
-        Vector3D rLOS_i = utils::pixel2los(frame.xPPs(i), frame.yPPs(i)); // Calculate 3D LOS vector
+        Vector3D rLOS_i = utils::pixel2los(this->frames->xPPs(i), this->frames->yPPs(i)); // Calculate 3D LOS vector
 
-        double norm_rLOS_i = utils::mag3d(rLOS_i.normalize()); // Nornmalized 3D LOS vector
+        norm_rLOS_i = utils::mag3d(rLOS_i.normalize()); // Normalized 3D LOS vector
 
-        double distCam_i = utils::mag3d(rLOS_i); // Range estimate from camera to obstacle
+        distCam_i = utils::mag3d(rLOS_i); // Range estimate from camera to obstacle
 
         norm_rLOS_list.push_back(norm_rLOS_i); // Store normalized LOS magnitudes
         distCam_list.push_back(distCam_i); // Store distance estimates
     }
 
-    Vector2D vectAPF = {rV_total.x, rV_total.y} + {0, 1}; // Combine direction vector with forward vector
+    // Combine direction vector with forward vector
+    Vector2D vectAPF = {0.0, 0.0};
+    vectAPF.x = rV_total.x;
+    vectAPF.y = rV_total.y + 1.0; 
     
     Vector2D normVectAPF = vectAPF.normalize(); // Normalize for stability
    
@@ -83,7 +91,7 @@ void Navigation::navigate()
 
     int speed = setSpeed(); // Grab speed command from potentiometer
 
-    this->pWalker->steer(this->pWalker->forward, speed); // Tell the rollator the motor differential
+    this->steer(this->pWalker->forward, speed); // Tell the rollator the motor differential
 }
 
 int Navigation::setSpeed()

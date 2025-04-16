@@ -40,6 +40,7 @@
 struct Vector2D {
     double x, y;
 
+    Vector2D() : x(0.0), y(0.0) {} // default constructor
     Vector2D(double _x, double _y) : x(_x), y(_y) {}
 
     Vector2D normalize() const {
@@ -51,6 +52,7 @@ struct Vector2D {
 struct Vector3D {
     double x, y, z;
 
+    Vector3D() : x(0.0), y(0.0), z(0.0) {} // default constructor
     Vector3D(double _x, double _y, double _z) : x(_x), y(_y), z(_z) {}
 
     Vector3D normalize() const {

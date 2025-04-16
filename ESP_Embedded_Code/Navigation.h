@@ -5,6 +5,8 @@
 #include "Environment.h"
 #include "Networking.h"
 #include <Arduino.h>
+#include "utils.cpp"
+#include "Constants.h"
 
 struct Frame
 {
@@ -27,8 +29,8 @@ public:
     Navigation(Walker *pWalker, Networking *pNetworking, Environment *pEnvironment); // Constructor
     void Sample_Sonar_Avoidance();
     void navigate();
-    void setSpeed();
-    void steer(std::vector<double> direction_vector, int speed);
+    int setSpeed();
+    void steer(Vector2D direction_vector, int speed);
     void saveNewFrame();
     void tiltWarning();
 

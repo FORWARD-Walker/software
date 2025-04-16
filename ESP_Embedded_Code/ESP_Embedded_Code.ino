@@ -8,7 +8,6 @@
 // # Include
 #include <Wire.h> // I2C
 #include "Networking.h"
-#include "utils.cpp"
 #include "Constants.h"
 #include "Navigation.h"
 #include "Walker.h"
@@ -110,14 +109,28 @@ if (Timer_30HZ_FG)
   }
 
   // 1 HZ ISR
-  if(Timer_1HZ_FG)
+  if (Timer_1HZ_FG)
   {
-    // Blink Heartbeat
-    pEnvironment->updateEnvironment(); // Update Environment data
-    pNavigation->navigate(); // Navigate
-    Blink_Heartbeat();
+      // Record start time
+      unsigned long startMicros = micros();
 
-    Timer_1HZ_FG = false;  // Reset ISR
+      // Update Environment data
+      pEnvironment->updateEnvironment();
+
+      // Record end time
+      unsigned long endMicros = micros();
+      
+      // Calculate elapsed time
+      unsigned long elapsedMicros = endMicros - startMicros;
+      
+      // Send timing info over serial
+      pNetworking->pushSerialData("updateEnvironment took " + String(elapsedMicros) + " microseconds.\n");
+
+      // Continue with other tasks
+      pNavigation->navigate(); // Navigate
+      Blink_Heartbeat();
+
+      Timer_1HZ_FG = false;  // Reset ISR
   }
 }
 
