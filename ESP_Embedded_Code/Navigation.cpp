@@ -121,8 +121,11 @@ void Navigation::navigate()
         for (int i = 0; i < this->curFrame.object_names.size(); i++)
         {
             Vector2D rV_i = utils::repulsionVector(this->curFrame.xPPs[i], this->curFrame.yPPs[i]); // Calculate repulsion vector
-            rV_total.x += rV_i.x;                                                                   // accumulate x-direction commands
-            rV_total.y += rV_i.y;                                                                   // accumulate y-direction commands
+
+            Vector2D rV_i_norm = rV_i.normalize(); // Normalize repulsion vector
+
+            rV_total.x += rV_i_norm.x; // accumulate x-direction commands
+            rV_total.y += rV_i_norm.y; // accumulate y-direction commands
 
             Vector3D rLOS_i = utils::pixel2los(this->curFrame.xPPs[i], this->curFrame.yPPs[i]); // Calculate 3D LOS vector
 

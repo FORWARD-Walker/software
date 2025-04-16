@@ -1,5 +1,6 @@
 #include <iostream>
 #include <cmath>
+#include <algorithm>
 #include "Constants.h"
 
 // Utilities Class for simple mathematical operations
@@ -53,10 +54,11 @@ public:
     Vector2D repulsion = {0.0, 0.0};
 
     // place bounds on dist
+    dist = std::max(0.1, std::min(dist, 5.0)); // should ensure far obstacles don't influence unnecessarily
 
     if (dist > 0) // Avoid divide by zero
     {
-      double magnitude = std::min(0.0, dist * 0.003 - 1);
+      double magnitude = std::max(-1.0, std::min(0.0, dist * 0.0025 - 0.5));;
       double direction = atan2(pos.y, pos.x);
       repulsion.x = magnitude * std::cos(direction);
       repulsion.y = magnitude * std::sin(direction);
