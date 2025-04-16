@@ -18,6 +18,14 @@ void Navigation::navigate()
     this->curFrame.xPPs = this->pEnvironment->xPPs;
     this->curFrame.yPPs = this->pEnvironment->yPPs;
 
+    // Print Frame
+    String frameData = "Frame: ";
+    for (int i = 0; i < this->curFrame.object_names.size(); i++)
+    {
+        frameData += "Object Name: " + String(this->curFrame.object_names[i]) + " X: " + String(this->curFrame.xPPs[i]) + " Y: " + String(this->curFrame.yPPs[i]) + "\n";
+    }
+    this->pNetworking->pushSerialData(frameData);
+
     // Get Sonar Values
     int S1_dist = this->pWalker->pS1->distance;
     int S2_dist = this->pWalker->pS2->distance;
@@ -70,9 +78,10 @@ void Navigation::navigate()
             if (S3_dist < SONAR_NAV_ZONE_3)
                 speedOffset = SONAR_NAV_ZONE_3_OFFSET;
 
-            this->pWalker->pWheelR->startWheel(MIN_SPEED, 'F');
-            this->pWalker->pWheelL->startWheel(this->pWalker->curSpeed + this->pWalker->curOffset + speedOffset, 'F');
+            this->pWalker->pWheelL->startWheel(MIN_SPEED, 'F');
+            this->pWalker->pWheelR->startWheel(this->pWalker->curSpeed + this->pWalker->curOffset + speedOffset, 'F');
         }
+        this->hapticPattern();
     }
     // Bump walker right
     else if (S1_dist < SONAR_SIDE_SAFEZONE && !(S4_dist < SONAR_SIDE_SAFEZONE))
@@ -152,8 +161,6 @@ void Navigation::setSpeed()
 {
     this->pWalker->pPotentiometer->readValue();
     int potVal = this->pWalker->pPotentiometer->value;
-    String str = String(potVal);
-    this->pNetworking->pushSerialData(str);
 
     if (potVal > 2100)
     {
@@ -252,6 +259,38 @@ void Navigation::steer(Vector2D direction_vector)
     // Start the wheels (assuming 'F' = forward)
     this->pWalker->pWheelL->startWheel(speedL, 'F');
     this->pWalker->pWheelR->startWheel(speedR, 'F');
+}
+
+void Navigation::hapticPattern()
+{
+    int i;
+    int distanceL = this->pWalker->pS2->distance / 10;
+    int distanceR = this->pWalker->pS3->distance / 10;
+
+    if (distanceL < distanceR)
+    {
+        for (i = 0; i < 5 - distanceL; i++)
+        {
+            pulseHaptic(3, 'L');
+        }
+    }
+
+    else if (distanceR < distanceL)
+    {
+        for (i = 0; i < 5 - distanceR; i++)
+        {
+            pulseHaptic(3, 'R');
+        }
+    }
+
+    else
+    {
+        for (i = 0; i > distanceL; i++)
+        {
+            pulseHaptic(3, 'L');
+            pulseHaptic(3, 'R');
+        }
+    }
 }
 
 void Navigation::tiltWarning()
