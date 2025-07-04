@@ -1,3 +1,5 @@
+![Project Architecture](images/FORWARD_logo.png)
+
 # FORWARD Software
 
 This repository contains all necessary software to compile a complete FORWARD build. This code models and manages all peripherals for FORWARD.
