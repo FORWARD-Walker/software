@@ -2,9 +2,9 @@
 <img src="https://raw.githubusercontent.com/FORWARD-Walker/website-fa24sp25g25/main/images/FORWARD_logo.png" alt="FORWARD Logo" width="200"/>
 
 The following repository file structure is:
-/ESP_Embedded_Code 
-/AMB82_Cam_Code
-/Cam_Network_Stream
+/ESP_Embedded_Code   
+/AMB82_Cam_Code  
+/Cam_Network_Stream  
 
 ESP_Embedded_Code: Code needed to flash the ESP32 chip for running the full system
 
