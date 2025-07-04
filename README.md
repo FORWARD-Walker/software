@@ -1,6 +1,5 @@
-<img src="https://raw.githubusercontent.com/FORWARD-Walker/website-fa24sp25g25/main/images/FORWARD_logo.png" alt="FORWARD Logo" width="200"/>
-
 # FORWARD Software
+<img src="https://raw.githubusercontent.com/FORWARD-Walker/website-fa24sp25g25/main/images/FORWARD_logo.png" alt="FORWARD Logo" width="200"/>
 
 This repository contains all necessary software to compile a complete FORWARD build. This code models and manages all peripherals for FORWARD.
 
