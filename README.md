@@ -1,4 +1,4 @@
-![Project Architecture](images/FORWARD_logo.png)
+![FORWARD Logo](https://raw.githubusercontent.com/FORWARD-Walker/website-fa24sp25g25/main/images/FORWARD_logo.png)
 
 # FORWARD Software
 
