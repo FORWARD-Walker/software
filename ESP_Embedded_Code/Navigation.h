@@ -31,6 +31,7 @@ public:
     void setSpeed();
     void steer(Vector2D direction_vector);
     void tiltWarning();
+    void hapticPattern();
 
     Walker *pWalker;           // Walker Pointer
     Networking *pNetworking;   // Network pointer
